@@ -31,6 +31,7 @@
       --color-pt: #A855F7;
       --color-pt-bg: rgba(168, 85, 247, 0.12);
       --brand-red: #E53935;
+      --web-rgb: 255, 255, 255;
       
       --web-spoke: rgba(255, 255, 255, 0.045);
       --web-ring: rgba(255, 255, 255, 0.055);
@@ -61,6 +62,7 @@
       --color-pt: #4F46E5;
       --color-pt-bg: rgba(79, 70, 229, 0.08);
       --brand-red: #C8102E;
+      --web-rgb: 200, 16, 46;
       
       --web-spoke: rgba(200, 16, 46, 0.06);
       --web-ring: rgba(20, 18, 16, 0.06);
@@ -262,15 +264,28 @@
     @keyframes spider-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1px); } }
 
     
-    /* Web Canvas & Direction 1 Motion */
-    #web-canvas {
+    /* Web Canvas Dual-Layer (Living Background & Foreground FX) */
+    #web-canvas-bg {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
       pointer-events: none;
-      z-index: 5;
+      z-index: 0;
+    }
+    #web-canvas-fg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .container {
+      position: relative;
+      z-index: 1;
     }
     .job-card.pulse-hit {
       border-color: #ffffff !important;
@@ -637,7 +652,8 @@
   </style>
 </head>
 <body>
-  <canvas id="web-canvas"></canvas>
+  <canvas id="web-canvas-bg"></canvas>
+  <canvas id="web-canvas-fg"></canvas>
 
   <header>
     <div class="header-left">
@@ -777,31 +793,18 @@
 
     
   // ========================================================
-  // DIRECTION 1: LA TOILE VIVANTE, ONDE RADAR & FILS SOIE
+  // LA TOILE VIVANTE : AMBIENT SWAY, PULSES, DUAL-LAYER & HiDPI
   // ========================================================
-  (function initSpiderWebEngine() {
-    const canvas = document.getElementById('web-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+  (function initLivingSpiderWebEngine() {
+    const canvasBg = document.getElementById('web-canvas-bg');
+    const canvasFg = document.getElementById('web-canvas-fg');
+    if (!canvasBg || !canvasFg) return;
+    const ctxBg = canvasBg.getContext('2d');
+    const ctxFg = canvasFg.getContext('2d');
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    window.addEventListener('resize', () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-      buildWebGeometry();
-    });
-
-    let mouse = { x: -1000, y: -1000 };
-    window.addEventListener('mousemove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    });
-    window.addEventListener('mouseleave', () => {
-      mouse.x = -1000;
-      mouse.y = -1000;
-    });
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const SPOKES = 18;
     const RINGS = 11;
@@ -836,8 +839,68 @@
         nodes.push(spokeNodes);
       }
     }
-    buildWebGeometry();
 
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvasBg.width = width * dpr;
+      canvasBg.height = height * dpr;
+      canvasFg.width = width * dpr;
+      canvasFg.height = height * dpr;
+      ctxBg.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctxFg.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildWebGeometry();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Mouse & Touch Tracking
+    let mouse = { x: -1000, y: -1000 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+    window.addEventListener('mouseleave', () => {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    });
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    }, { passive: true });
+
+    // Scroll Reaction (Physical Wobble on scroll)
+    let lastScroll = window.scrollY;
+    window.addEventListener('scroll', () => {
+      const delta = Math.max(-40, Math.min(40, window.scrollY - lastScroll));
+      lastScroll = window.scrollY;
+      for (const spoke of nodes) {
+        for (const n of spoke) {
+          n.vy += delta * 0.035 * (n.ring / RINGS);
+        }
+      }
+    }, { passive: true });
+
+    // Pulses traveling down silk spokes
+    const pulses = [];
+    const spawnPulse = () => {
+      pulses.push({
+        spoke: Math.floor(Math.random() * SPOKES),
+        p: 0,
+        speed: 0.005 + Math.random() * 0.005
+      });
+    };
+    setInterval(() => {
+      if (pulses.length < 6 && !document.hidden) spawnPulse();
+    }, 900);
+
+    // Hovered Card Silk Thread Tracking
     let hoveredCard = null;
     document.addEventListener('mouseover', (e) => {
       const card = e.target.closest('.job-card');
@@ -854,6 +917,7 @@
       }
     });
 
+    // Radar Shockwave with Pre-Cached Card Rectangles (Zero Layout Reflow at 60 FPS)
     window.activeShockwaves = [];
     window.triggerSonarRadarWave = function(originX, originY) {
       const logoPet = document.getElementById('logo-pet');
@@ -870,6 +934,17 @@
         }
       }
 
+      // Pre-cache card coordinates ONCE to avoid getBoundingClientRect layout thrashing
+      const cards = Array.from(document.querySelectorAll('.job-card')).map(el => {
+        const r = el.getBoundingClientRect();
+        return {
+          el: el,
+          cx: r.left + r.width / 2,
+          cy: r.top + r.height / 2,
+          hit: false
+        };
+      });
+
       const maxR = Math.hypot(width, height) * 1.15;
       window.activeShockwaves.push({
         x: ox,
@@ -877,15 +952,16 @@
         radius: 0,
         maxRadius: maxR,
         speed: 22,
-        cardsHit: new Set()
+        cards: cards
       });
 
+      // Vibrate web around origin
       for (let s = 0; s < SPOKES; s++) {
         for (let r = 0; r < RINGS; r++) {
           const n = nodes[s][r];
           const d = Math.hypot(n.x - ox, n.y - oy);
           if (d < 400) {
-            const force = (400 - d) * 0.04;
+            const force = (400 - d) * 0.05;
             n.vx += (Math.random() - 0.5) * force;
             n.vy += (Math.random() - 0.5) * force;
           }
@@ -895,67 +971,115 @@
 
     const SPRING = 0.065;
     const DAMPING = 0.88;
-    const INFLUENCE_DIST = 95;
+    const INFLUENCE_DIST = 100;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function render(time) {
-      ctx.clearRect(0, 0, width, height);
+      if (document.hidden) {
+        requestAnimationFrame(render);
+        return;
+      }
 
-      // 1. Physics update
+      ctxBg.clearRect(0, 0, width, height);
+      ctxFg.clearRect(0, 0, width, height);
+
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const webRgb = isLight ? '200, 16, 46' : '255, 255, 255';
+      const t = (time || 0) * 0.001;
+
+      // 1. Physics & Ambient Breathing Sway
       for (let s = 0; s < SPOKES; s++) {
         for (let r = 0; r < RINGS; r++) {
           const n = nodes[s][r];
-          const ax = (n.restX - n.x) * SPRING;
-          const ay = (n.restY - n.y) * SPRING;
-          n.vx = (n.vx + ax) * DAMPING;
-          n.vy = (n.vy + ay) * DAMPING;
 
-          const dx = n.x - mouse.x;
-          const dy = n.y - mouse.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < INFLUENCE_DIST && dist > 1) {
-            const push = (1 - dist / INFLUENCE_DIST) * 4.2;
-            n.vx += (dx / dist) * push;
-            n.vy += (dy / dist) * push;
+          if (!prefersReducedMotion) {
+            // Ambient wind / breath sway
+            const sway = 1.4 + n.ring * 1.6;
+            const targetX = n.restX + Math.sin(t * 0.75 + n.spoke * 0.9 + n.ring * 0.35) * sway;
+            const targetY = n.restY + Math.cos(t * 0.65 + n.spoke * 0.7 + n.ring * 0.45) * sway;
+
+            const ax = (targetX - n.x) * SPRING;
+            const ay = (targetY - n.y) * SPRING;
+            n.vx = (n.vx + ax) * DAMPING;
+            n.vy = (n.vy + ay) * DAMPING;
+
+            // Mouse / Touch displacement
+            const dx = n.x - mouse.x;
+            const dy = n.y - mouse.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < INFLUENCE_DIST && dist > 1) {
+              const push = (1 - dist / INFLUENCE_DIST) * 4.5;
+              n.vx += (dx / dist) * push;
+              n.vy += (dy / dist) * push;
+            }
+
+            n.x += n.vx;
+            n.y += n.vy;
+          } else {
+            n.x = n.restX;
+            n.y = n.restY;
           }
-
-          n.x += n.vx;
-          n.y += n.vy;
         }
       }
 
-      // 2. Radial Spokes
-      ctx.lineWidth = 1;
+      // 2. Draw Spokes on Background Canvas (Behind Cards)
+      ctxBg.lineWidth = 1;
       for (let s = 0; s < SPOKES; s++) {
-        ctx.beginPath();
-        ctx.moveTo(origin.x, origin.y);
+        ctxBg.beginPath();
+        ctxBg.moveTo(origin.x, origin.y);
         for (let r = 0; r < RINGS; r++) {
-          ctx.lineTo(nodes[s][r].x, nodes[s][r].y);
+          ctxBg.lineTo(nodes[s][r].x, nodes[s][r].y);
         }
-        ctx.strokeStyle = (document.documentElement.getAttribute('data-theme') === 'light') ? 'rgba(200, 16, 46, 0.07)' : 'rgba(255, 255, 255, 0.045)';
-        ctx.stroke();
+        ctxBg.strokeStyle = `rgba(${webRgb}, ${isLight ? 0.08 : 0.095})`;
+        ctxBg.stroke();
       }
 
-      // 3. Web Rings
+      // 3. Draw Traveling Light Pulses along Spokes
+      if (!prefersReducedMotion) {
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          const pu = pulses[i];
+          pu.p += pu.speed;
+          if (pu.p >= 1) { pulses.splice(i, 1); continue; }
+          const f = pu.p * (RINGS - 1);
+          const r0 = Math.floor(f);
+          const r1 = Math.min(r0 + 1, RINGS - 1);
+          const k = f - r0;
+          const a = nodes[pu.spoke][r0];
+          const b = nodes[pu.spoke][r1];
+          const px = a.x + (b.x - a.x) * k;
+          const py = a.y + (b.y - a.y) * k;
+          const pulseAlpha = Math.sin(pu.p * Math.PI) * 0.95;
+
+          ctxBg.beginPath();
+          ctxBg.arc(px, py, 2.5, 0, Math.PI * 2);
+          ctxBg.fillStyle = `rgba(${webRgb}, ${pulseAlpha})`;
+          ctxBg.shadowBlur = isLight ? 8 : 12;
+          ctxBg.shadowColor = `rgba(${webRgb}, 0.8)`;
+          ctxBg.fill();
+          ctxBg.shadowBlur = 0;
+        }
+      }
+
+      // 4. Draw Rings on Background Canvas
       for (let r = 0; r < RINGS; r++) {
-        ctx.beginPath();
+        ctxBg.beginPath();
         for (let s = 0; s < SPOKES; s++) {
           const curr = nodes[s][r];
           const next = nodes[(s + 1) % SPOKES][r];
-          if (s === 0) ctx.moveTo(curr.x, curr.y);
+          if (s === 0) ctxBg.moveTo(curr.x, curr.y);
           const midX = (curr.x + next.x) / 2;
           const midY = (curr.y + next.y) / 2;
           const sag = 0.92;
           const ctrlX = origin.x + (midX - origin.x) * sag;
           const ctrlY = origin.y + (midY - origin.y) * sag;
-          ctx.quadraticCurveTo(ctrlX, ctrlY, next.x, next.y);
+          ctxBg.quadraticCurveTo(ctrlX, ctrlY, next.x, next.y);
         }
-        const ringAlpha = 0.035 + (r / RINGS) * 0.05;
-        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-        ctx.strokeStyle = isLight ? `rgba(20, 18, 16, ${ringAlpha * 0.9})` : `rgba(255, 255, 255, ${ringAlpha})`;
-        ctx.stroke();
+        const ringAlpha = (isLight ? 0.06 : 0.07) + (r / RINGS) * (isLight ? 0.08 : 0.09);
+        ctxBg.strokeStyle = isLight ? `rgba(20, 18, 16, ${ringAlpha})` : `rgba(${webRgb}, ${ringAlpha})`;
+        ctxBg.stroke();
       }
 
-      // 4. Silk Thread to Hovered Job Card
+      // 5. Draw Silk Thread on Foreground Canvas (Over Cards)
       if (hoveredCard) {
         const logoPet = document.getElementById('logo-pet');
         if (logoPet) {
@@ -965,76 +1089,69 @@
           const startX = lRect.left + lRect.width / 2;
           const startY = lRect.top + lRect.height / 2;
           const targetX = cRect.left + cRect.width / 2;
-          const targetY = cRect.top + 10;
+          const targetY = cRect.top + 8;
 
           const wave = Math.sin((time || 0) * 0.008) * 3.5;
           const ctrlX = (startX + targetX) / 2 + wave;
           const ctrlY = (startY + targetY) / 2 - 25;
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
-          ctx.strokeStyle = (document.documentElement.getAttribute('data-theme') === 'light') ? 'rgba(200, 16, 46, 0.75)' : 'rgba(255, 255, 255, 0.45)';
-          ctx.lineWidth = 1.5;
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
-          ctx.stroke();
+          ctxFg.save();
+          ctxFg.beginPath();
+          ctxFg.moveTo(startX, startY);
+          ctxFg.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
+          ctxFg.strokeStyle = isLight ? 'rgba(200, 16, 46, 0.75)' : 'rgba(255, 255, 255, 0.6)';
+          ctxFg.lineWidth = 1.6;
+          ctxFg.shadowBlur = 8;
+          ctxFg.shadowColor = isLight ? 'rgba(200, 16, 46, 0.6)' : 'rgba(255, 255, 255, 0.8)';
+          ctxFg.stroke();
 
-          ctx.beginPath();
-          ctx.arc(targetX, targetY, 3, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = '#ffffff';
-          ctx.fill();
-          ctx.restore();
+          ctxFg.beginPath();
+          ctxFg.arc(targetX, targetY, 3, 0, Math.PI * 2);
+          ctxFg.fillStyle = isLight ? '#C8102E' : '#FFFFFF';
+          ctxFg.shadowBlur = 12;
+          ctxFg.shadowColor = isLight ? '#C8102E' : '#FFFFFF';
+          ctxFg.fill();
+          ctxFg.restore();
         }
       }
 
-      // 5. Active Sonar Radar Shockwaves
+      // 6. Draw Radar Shockwaves on Foreground Canvas
       if (window.activeShockwaves.length > 0) {
-        const allCards = document.querySelectorAll('.job-card');
-
         for (let i = window.activeShockwaves.length - 1; i >= 0; i--) {
           const sw = window.activeShockwaves[i];
           sw.radius += sw.speed;
           const progress = sw.radius / sw.maxRadius;
           const alpha = Math.max(0, 1 - progress);
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.75})`;
-          ctx.lineWidth = 2.5;
-          ctx.shadowBlur = 16;
-          ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-          ctx.stroke();
+          ctxFg.save();
+          ctxFg.beginPath();
+          ctxFg.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctxFg.strokeStyle = isLight ? `rgba(200, 16, 46, ${alpha * 0.85})` : `rgba(255, 255, 255, ${alpha * 0.8})`;
+          ctxFg.lineWidth = 2.5;
+          ctxFg.shadowBlur = 16;
+          ctxFg.shadowColor = isLight ? 'rgba(200, 16, 46, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+          ctxFg.stroke();
 
           if (sw.radius > 35) {
-            ctx.beginPath();
-            ctx.arc(sw.x, sw.y, sw.radius - 28, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.35})`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
+            ctxFg.beginPath();
+            ctxFg.arc(sw.x, sw.y, sw.radius - 28, 0, Math.PI * 2);
+            ctxFg.strokeStyle = isLight ? `rgba(200, 16, 46, ${alpha * 0.35})` : `rgba(255, 255, 255, ${alpha * 0.35})`;
+            ctxFg.lineWidth = 1;
+            ctxFg.stroke();
           }
-          ctx.restore();
+          ctxFg.restore();
 
-          allCards.forEach((card) => {
-            if (!sw.cardsHit.has(card)) {
-              const rect = card.getBoundingClientRect();
-              const cardCenterX = rect.left + rect.width / 2;
-              const cardCenterY = rect.top + rect.height / 2;
-              const dist = Math.hypot(cardCenterX - sw.x, cardCenterY - sw.y);
-
+          // Check against pre-cached cards (zero getBoundingClientRect reflow!)
+          for (const item of sw.cards) {
+            if (!item.hit) {
+              const dist = Math.hypot(item.cx - sw.x, item.cy - sw.y);
               if (Math.abs(dist - sw.radius) < 55) {
-                sw.cardsHit.add(card);
-                card.classList.add('pulse-hit');
-                setTimeout(() => {
-                  card.classList.remove('pulse-hit');
-                }, 420);
+                item.hit = true;
+                item.el.classList.add('pulse-hit');
+                setTimeout(() => item.el.classList.remove('pulse-hit'), 420);
               }
             }
-          });
+          }
 
           if (progress >= 1) {
             window.activeShockwaves.splice(i, 1);
@@ -1044,6 +1161,7 @@
 
       requestAnimationFrame(render);
     }
+
     requestAnimationFrame(render);
   })();
 
