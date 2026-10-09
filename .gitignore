@@ -19,6 +19,8 @@ venv/
 
 # Personal search and generation outputs
 HOT_OPPORTUNITIES.md
+candidate_profile.json
+uploaded_cv.pdf
 cover_letter_*.html
 *.pdf
 tunnel_url.txt
