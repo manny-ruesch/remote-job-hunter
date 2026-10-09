@@ -1,0 +1,30 @@
+# Environment secrets
+.env
+.env.local
+
+# Local database and cache
+jobs.db
+jobs.db-journal
+jobs.db-wal
+jobs.db-shm
+hunter.log
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Personal search and generation outputs
+HOT_OPPORTUNITIES.md
+cover_letter_*.html
+*.pdf
+tunnel_url.txt
+tunnel.log
+
+# Screenshots and archives
+*.png
+*.zip
+*.tar.gz
