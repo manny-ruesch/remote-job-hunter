@@ -36,25 +36,35 @@ HARD_DISQUALIFIERS = [
     "native german", "german native", "travel frequently", "travel 25-50%", "travel 50%"
 ]
 
+DISQUALIFIED_COMPANIES = {"openai", "anthropic", "cohere"}
+
 def score_job_heuristically(job: dict[str, Any]) -> float:
     """
     Computes a fast lexical score (-50 to +100) based on title and description density.
     Runs in < 0.1ms per job with zero LLM/API cost.
     """
+    company = (job.get("company") or "").lower().strip()
+    if company in DISQUALIFIED_COMPANIES:
+        return -100.0
+
     title = (job.get("title") or "").lower()
     desc = (job.get("description") or "").lower()
     blob = f"{title} {desc}"
     
     score = 0.0
     
-    # Hard disqualifiers in title or description
+    # Hard disqualifiers in title or description (e.g. 5+ years of experience)
+    if re.search(r'\b(5|6|7|8|9|10)\+?\s*(ans|years?)\b', blob):
+        score -= 45.0
+
     for hd in HARD_DISQUALIFIERS:
         if hd in blob:
             score -= 40.0
 
     # 1. Disqualification checks in title
     for p in PENALTY_ROLES:
-        if re.search(r'\b' + re.escape(p) + r'\b', title):
+        pattern = r'(?<!\w)c\+\+(?!\w)' if p == "c++" else rf'\b{re.escape(p)}\b'
+        if re.search(pattern, title):
             score -= 30.0
             
     for p in DEEP_BACKEND_PENALTIES:
@@ -84,8 +94,8 @@ def score_job_heuristically(job: dict[str, Any]) -> float:
     loc = (job.get("location") or "").lower()
     if any(r in loc for r in ["remote", "europe", "emea", "worldwide", "anywhere", "berlin", "germany", "france"]):
         score += 5.0
-    elif "us only" in loc or "must reside in the united states" in desc:
-        score -= 15.0
+    elif "us only" in loc or "must reside in the united states" in desc or "usa only" in loc:
+        score -= 25.0
 
     return score
 

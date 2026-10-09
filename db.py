@@ -4,7 +4,9 @@ from config import DB_PATH
 from typing import Optional, Any
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    conn.execute("PRAGMA journal_mode = WAL;")
+    conn.execute("PRAGMA busy_timeout = 5000;")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -39,6 +41,8 @@ def init_db():
         c.execute("ALTER TABLE jobs ADD COLUMN cold_outreach TEXT")
     if "job_type" not in cols:
         c.execute("ALTER TABLE jobs ADD COLUMN job_type TEXT DEFAULT 'full_time'")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status_fit ON jobs(status, fit_score);")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_type_fit ON jobs(job_type, fit_score);")
     conn.commit()
     conn.close()
 
@@ -71,9 +75,28 @@ def save_job(
     conn = get_conn()
     c = conn.cursor()
     c.execute("""
-    INSERT OR REPLACE INTO jobs 
+    INSERT INTO jobs 
     (id, source, company, title, location, url, salary, description, fit_score, tech_match, pitch_hook, tailored_pitch, proof_of_work, cold_outreach, job_type, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+        source = excluded.source,
+        company = excluded.company,
+        title = excluded.title,
+        location = excluded.location,
+        url = excluded.url,
+        salary = excluded.salary,
+        description = excluded.description,
+        fit_score = CASE WHEN excluded.fit_score > 0 THEN excluded.fit_score ELSE jobs.fit_score END,
+        tech_match = CASE WHEN excluded.tech_match != '' THEN excluded.tech_match ELSE jobs.tech_match END,
+        pitch_hook = CASE WHEN excluded.pitch_hook != '' THEN excluded.pitch_hook ELSE jobs.pitch_hook END,
+        tailored_pitch = CASE WHEN excluded.tailored_pitch != '' THEN excluded.tailored_pitch ELSE jobs.tailored_pitch END,
+        proof_of_work = CASE WHEN excluded.proof_of_work IS NOT NULL AND excluded.proof_of_work != '' THEN excluded.proof_of_work ELSE jobs.proof_of_work END,
+        cold_outreach = CASE WHEN excluded.cold_outreach IS NOT NULL AND excluded.cold_outreach != '' THEN excluded.cold_outreach ELSE jobs.cold_outreach END,
+        job_type = excluded.job_type,
+        status = CASE 
+            WHEN jobs.status IN ('applied', 'interview', 'archived') THEN jobs.status 
+            ELSE excluded.status 
+        END
     """, (
         job_id, source, company, title, location, url, salary, description,
         fit_score, tech_match, pitch_hook, tailored_pitch, proof_of_work, cold_outreach, job_type, status

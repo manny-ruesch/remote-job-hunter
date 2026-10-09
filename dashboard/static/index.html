@@ -952,38 +952,53 @@
       
       gsap.to(content, { opacity: 0.2, duration: 0.4 });
       status.style.display = 'block';
+      status.style.color = 'var(--accent)';
       
       // Spider descends
       gsap.to(spider, { top: "50%", duration: 0.8, ease: "bounce.out" });
-      // Spider spins web (moves side to side)
       gsap.to(spider, { left: "40%", duration: 0.2, yoyo: true, repeat: 10, ease: "power1.inOut", delay: 0.8 });
       
-      const steps = [
-        "Lecture du document...",
-        "Analyse sémantique Gemini...",
-        "Extraction de vos compétences...",
-        "Reconfiguration des heuristiques...",
-        "Lancement de la recherche..."
-      ];
+      status.textContent = "Extraction du texte PDF & Analyse Gemini 3.8 Flash...";
 
-      for (let i = 0; i < steps.length; i++) {
-        status.textContent = steps[i];
-        await new Promise(r => setTimeout(r, 600));
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/upload-cv', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          const profile = data.profile || {};
+          const role = profile.target_role || "Profil Candidat";
+          const domain = profile.domain || "GTM & Automation";
+          const stack = (profile.core_stack || []).slice(0, 4).join(', ');
+
+          status.style.color = "var(--accent)";
+          status.style.textShadow = "var(--accent-glow)";
+          status.textContent = `✅ CV analysé : ${role} [${domain}]`;
+          
+          document.getElementById('drop-title').textContent = role.toUpperCase();
+          document.getElementById('drop-sub').textContent = `CV synchronisé : ${file.name} • Stack : ${stack}`;
+
+          if (window.triggerSonarRadarWave) window.triggerSonarRadarWave();
+          showToast(`Profil mis à jour : ${role}`);
+        } else {
+          status.style.color = "var(--color-hot)";
+          status.textContent = `⚠️ Erreur : ${data.detail || data.message || "Échec de l'analyse"}`;
+        }
+      } catch (err) {
+        status.style.color = "var(--color-hot)";
+        status.textContent = `⚠️ Erreur réseau : ${err.message}`;
+      } finally {
+        gsap.killTweensOf(spider, "left");
+        gsap.to(spider, { top: "-30px", left: "50%", duration: 0.6, ease: "power3.in" });
+        gsap.to(content, { opacity: 1, duration: 0.4 });
+        triggerJobsRefreshAnimation();
       }
-
-      // Spider retracts
-      gsap.killTweensOf(spider, "left");
-      gsap.to(spider, { top: "-30px", left: "50%", duration: 0.6, ease: "power3.in" });
-      
-      status.style.color = "var(--accent)";
-      status.style.textShadow = "var(--accent-glow)";
-      status.textContent = "✅ Intelligence Artificielle reconfigurée avec succès !";
-      
-      document.getElementById('drop-title').textContent = "PROFIL ACTIF";
-      document.getElementById('drop-sub').textContent = "Fichier lu : " + file.name;
-      gsap.to(content, { opacity: 1, duration: 0.4 });
-
-      triggerJobsRefreshAnimation();
     }
 
     function triggerJobsRefreshAnimation() {
@@ -1044,6 +1059,16 @@
       } catch (e) { console.error('Jobs error:', e); }
     }
 
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function renderJobs(jobs) {
       const container = document.getElementById('jobs-container');
       if (!jobs || jobs.length === 0) {
@@ -1057,7 +1082,7 @@
         if (j.fit_score >= 8.5) badgeClass = 'score-hot';
         else if (j.fit_score >= 7.5) badgeClass = 'score-high';
 
-        const tagsHtml = (j.tech_match || '').split(',').filter(Boolean).slice(0, 4).map(t => `<span class="tech-tag">${t.trim()}</span>`).join('');
+        const tagsHtml = (j.tech_match || '').split(',').filter(Boolean).slice(0, 4).map(t => `<span class="tech-tag">${esc(t.trim())}</span>`).join('');
         let typeBadge = j.job_type === 'part_time' ? '<span class="tech-tag" style="border-color:var(--color-pt);color:var(--color-pt);">FLEX</span>' : '';
         if (j.job_type === 'contract') typeBadge = '<span class="tech-tag" style="border-color:#33ffcc;color:#33ffcc;">CONTRACT</span>';
 
@@ -1066,26 +1091,26 @@
             <div>
               <div class="job-header">
                 <div>
-                  <div class="job-company">${j.company || 'UNKNOWN'}</div>
-                  <div class="job-title">${j.title || 'NULL'}</div>
+                  <div class="job-company">${esc(j.company || 'UNKNOWN')}</div>
+                  <div class="job-title">${esc(j.title || 'NULL')}</div>
                 </div>
                 <div class="score-badge ${badgeClass}">${score}/10</div>
               </div>
               <div class="job-meta">
-                <span>[${j.location || 'Remote'}]</span>
-                <span>[SRC:${j.source || 'ATS'}]</span>
+                <span>[${esc(j.location || 'Remote')}]</span>
+                <span>[SRC:${esc(j.source || 'ATS')}]</span>
                 ${typeBadge}
               </div>
               <div style="margin-top: 12px;" class="tech-badges">${tagsHtml}</div>
-              ${j.pitch_hook ? `<div class="job-hook" style="margin-top:12px;">"${j.pitch_hook}"</div>` : ''}
+              ${j.pitch_hook ? `<div class="job-hook" style="margin-top:12px;">"${esc(j.pitch_hook)}"</div>` : ''}
             </div>
             <div class="job-footer">
               <div class="action-group">
-                <button class="btn" onclick="viewJobDetail('${j.id}')">DÉTAILS</button>
-                <button class="btn btn-primary" onclick="triggerAutoFill('${j.id}')">AUTO-FILL</button>
-                ${j.url ? `<a href="${j.url}" target="_blank" class="btn" style="text-decoration: none;">LIEN ↗</a>` : ''}
+                <button class="btn" onclick="viewJobDetail('${esc(j.id)}')">DÉTAILS</button>
+                <button class="btn btn-primary" onclick="triggerAutoFill('${esc(j.id)}')">AUTO-FILL</button>
+                ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" class="btn" style="text-decoration: none;">LIEN ↗</a>` : ''}
               </div>
-              <select class="status-select" onchange="updateJobStatus('${j.id}', this.value)">
+              <select class="status-select" onchange="updateJobStatus('${esc(j.id)}', this.value)">
                 <option value="hot" ${j.status === 'hot' ? 'selected' : ''}>🔥 HOT</option>
                 <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>📬 POSTULÉ</option>
                 <option value="archived" ${j.status === 'archived' ? 'selected' : ''}>📦 ARCHIVER</option>

@@ -9,8 +9,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from config import KEYWORD_FILTERS, TARGET_ROLES, EXCLUDED_ROLES
 
+DISQUALIFIED_COMPANIES = {"openai", "anthropic", "cohere"}
+
 def make_job_id(source: str, company: str, title: str, url: str) -> str:
-    raw = f"{source}:{company.lower().strip()}:{title.lower().strip()}:{url}"
+    clean_url = (url or "").split("?")[0].rstrip("/").lower()
+    norm_comp = company.lower().strip()
+    norm_title = title.lower().strip()
+    raw = f"{norm_comp}:{norm_title}:{clean_url}"
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
 
 def clean_html(text: str) -> str:
@@ -21,19 +26,37 @@ def clean_html(text: str) -> str:
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-def matches_keywords(title: str, desc: str) -> bool:
-    t_lower = title.lower()
-    # 1. Hard exclusion of core software engineering / pure sales / HR roles
-    if any(ex in t_lower for ex in EXCLUDED_ROLES):
+def matches_keywords(title: str, desc: str, company: str = "") -> bool:
+    if company and company.lower().strip() in DISQUALIFIED_COMPANIES:
         return False
+
+    t_lower = (title or "").lower()
+    
+    # 1. Hard exclusion of core software engineering / pure sales / HR roles
+    # Protect phrases like 'lead generation', 'lead gen' before checking 'lead'
+    is_lead_gen = bool(re.search(r'\blead\s+(generation|gen|qualif|nurtur)\b', t_lower))
+    
+    for ex in EXCLUDED_ROLES:
+        if ex == "lead" and is_lead_gen:
+            continue
+        pattern = rf'(?<!\w){re.escape(ex)}(?!\w)' if '+' in ex else rf'\b{re.escape(ex)}\b'
+        if re.search(pattern, t_lower):
+            return False
         
     # 2. Priority check for sweet-spot roles
-    if any(tr in t_lower for tr in TARGET_ROLES):
-        return True
+    for tr in TARGET_ROLES:
+        pattern = rf'\b{re.escape(tr)}\b'
+        if re.search(pattern, t_lower):
+            return True
         
-    # 3. Fallback: general keywords in title and description
-    blob = f"{t_lower} {desc[:600].lower()}"
-    return any(k.lower() in blob for k in KEYWORD_FILTERS)
+    # 3. Fallback: general keywords with strict word boundaries
+    blob = f"{t_lower} {desc[:800].lower()}"
+    for k in KEYWORD_FILTERS:
+        pattern = rf'(?<!\w){re.escape(k.lower())}(?!\w)' if '+' in k else rf'\b{re.escape(k.lower())}\b'
+        if re.search(pattern, blob):
+            return True
+
+    return False
 
 matches_criteria = matches_keywords
 
