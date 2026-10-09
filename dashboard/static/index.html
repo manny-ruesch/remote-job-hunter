@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#030303">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="icon" href="/static/pet_anim_192.gif">
   <title>Remote Job Hunter — Arachnid Engine</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
@@ -323,6 +326,260 @@
       .search-input {
         width: 100% !important;
       }
+    }
+
+    
+    /* Typography Overhaul */
+    .brand-title, .modal-title, .kanban-col-header {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-weight: 700 !important;
+    }
+    .job-title {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-weight: 600 !important;
+      font-size: 16px !important;
+      color: var(--text) !important;
+      line-height: 1.35 !important;
+    }
+    .job-company {
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      color: var(--brand-red) !important;
+    }
+
+    /* System Health Bar */
+    .health-bar {
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 36px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 10.5px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      overflow-x: auto;
+      white-space: nowrap;
+      position: relative;
+      z-index: 45;
+    }
+    [data-theme="light"] .health-bar {
+      background: rgba(240, 238, 232, 0.7);
+    }
+    .health-item { display: flex; align-items: center; gap: 6px; }
+    .health-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .health-dot.operational { background: #10B981; box-shadow: 0 0 8px #10B981; }
+    .health-dot.info { background: #3B82F6; }
+    .keyboard-hint { margin-left: auto; opacity: 0.85; }
+    .kbd {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9.5px;
+      color: var(--text);
+    }
+
+    /* Score Ring (SVG) */
+    .score-ring-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .score-ring-svg {
+      transform: rotate(-90deg);
+      width: 44px;
+      height: 44px;
+    }
+    .score-ring-bg {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 3.5;
+    }
+    .score-ring-progress {
+      fill: none;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s ease;
+    }
+    .score-ring-val {
+      position: absolute;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    /* Eligibility Pills */
+    .eligibility-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .eligibility-eu {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .eligibility-us {
+      background: rgba(245, 158, 11, 0.12);
+      color: #F59E0B;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .eligibility-anywhere {
+      background: rgba(59, 130, 246, 0.12);
+      color: #3B82F6;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Pitch Accordion */
+    .pitch-toggle {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      padding: 4px 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+    .pitch-toggle:hover { color: var(--accent); }
+    .pitch-collapse {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
+    }
+    .pitch-collapse.open {
+      max-height: 300px;
+      transition: max-height 0.35s ease-in-out;
+    }
+
+    /* Keyboard Selection Outline */
+    .job-card.keyboard-selected {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 20px var(--accent-glow), 0 0 0 2px var(--accent) !important;
+      transform: translateY(-2px);
+    }
+
+    /* View Switcher */
+    .view-switcher {
+      display: flex;
+      gap: 6px;
+    }
+    .view-btn {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .view-btn:hover, .view-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+
+    /* Dense Table View */
+    .table-container {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .dense-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      text-align: left;
+    }
+    .dense-table th {
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      color: var(--text-muted);
+      font-size: 10.5px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      user-select: none;
+    }
+    .dense-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+    [data-theme="light"] .dense-table td {
+      border-bottom: 1px solid rgba(20, 18, 16, 0.06);
+    }
+    .dense-table tr:hover td {
+      background: var(--card-hover);
+    }
+
+    /* Kanban Board */
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
+    @media (max-width: 1100px) {
+      .kanban-board { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .kanban-board { grid-template-columns: 1fr; }
+    }
+    .kanban-column {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 480px;
+    }
+    .kanban-col-header {
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .col-count {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+    .kanban-col-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: 70vh;
     }
 
     /* Container */
@@ -678,6 +935,16 @@
     </div>
   </header>
 
+  <!-- System Health Banner -->
+  <div id="system-health-bar" class="health-bar">
+    <div class="health-item"><span class="health-dot operational"></span> GEMINI 3.8 FLASH : <span id="health-gemini">OPÉRATIONNEL</span></div>
+    <div class="health-item"><span class="health-dot operational"></span> 47 SOURCES ACTIVES</div>
+    <div class="health-item"><span class="health-dot operational"></span> SQLITE WAL CONCURRENT</div>
+    <div class="health-item"><span class="health-dot info"></span> PROFIL : <span id="health-profile">REVOPS & AUTOMATION</span></div>
+    <div class="health-item keyboard-hint"><span class="kbd">J</span> <span class="kbd">K</span> Naviguer &bull; <span class="kbd">A</span> Auto-Fill &bull; <span class="kbd">X</span> Archiver &bull; <span class="kbd">Entrée</span> Détails</div>
+  </div>
+
+
   <div class="container">
     
     <!-- CV Dropzone / Spider Trap -->
@@ -729,6 +996,13 @@
         <div class="filter-chip" onclick="setFilter('archived', this)">📦 Archivées <span class="chip-count" id="count-archived">0</span></div>
       </div>
 
+      
+      <div class="view-switcher">
+        <button class="view-btn active" onclick="switchView('grid', this)" title="Vue Cartes">[ ⊞ CARTES ]</button>
+        <button class="view-btn" onclick="switchView('table', this)" title="Vue Tableau Dense">[ ☰ TABLEAU ]</button>
+        <button class="view-btn" onclick="switchView('kanban', this)" title="Vue Kanban">[ ☷ KANBAN ]</button>
+      </div>
+
       <input type="text" class="search-input" id="search-box" placeholder="Rechercher une entreprise, un rôle... (Touche '/')" oninput="handleSearch()">
     </div>
 
@@ -736,6 +1010,48 @@
     <div class="jobs-grid" id="jobs-container">
       <!-- Injected dynamically -->
     </div>
+
+    <!-- Dense Table View -->
+    <div id="table-view-container" class="table-container" style="display: none;">
+      <table class="dense-table" id="jobs-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable('score')">SCORE ▾</th>
+            <th onclick="sortTable('company')">ENTREPRISE</th>
+            <th onclick="sortTable('title')">POSTE</th>
+            <th>LOCALISATION</th>
+            <th>TYPE</th>
+            <th>STACK</th>
+            <th>ACTIONS</th>
+            <th>STATUT</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- Injected dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Kanban View -->
+    <div id="kanban-view-container" class="kanban-board" style="display: none;">
+      <div class="kanban-column" id="kanban-col-hot">
+        <div class="kanban-col-header">🔥 HOT MATCHES <span class="col-count" id="k-count-hot">0</span></div>
+        <div class="kanban-col-cards" id="k-cards-hot"></div>
+      </div>
+      <div class="kanban-column" id="kanban-col-applied">
+        <div class="kanban-col-header">📬 POSTULÉES <span class="col-count" id="k-count-applied">0</span></div>
+        <div class="kanban-col-cards" id="k-cards-applied"></div>
+      </div>
+      <div class="kanban-column" id="kanban-col-interview">
+        <div class="kanban-col-header">🎯 ENTRETIENS <span class="col-count" id="k-count-interview">0</span></div>
+        <div class="kanban-col-cards" id="k-cards-interview"></div>
+      </div>
+      <div class="kanban-column" id="kanban-col-archived">
+        <div class="kanban-col-header">📦 ARCHIVÉES <span class="col-count" id="k-count-archived">0</span></div>
+        <div class="kanban-col-cards" id="k-cards-archived"></div>
+      </div>
+    </div>
+
 
   </div>
 
@@ -1470,6 +1786,18 @@
       requestAnimationFrame(update);
     }
 
+    
+    async function loadHealthStatus() {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const d = await res.json();
+          const pEl = document.getElementById('health-profile');
+          if (pEl) pEl.textContent = (d.active_profile || 'GTM & AUTOMATION').toUpperCase();
+        }
+      } catch (e) {}
+    }
+
     // --- App Logic ---
     async function loadStats() {
       try {
@@ -1527,41 +1855,115 @@
         .replace(/'/g, '&#39;');
     }
 
-    function renderJobs(jobs) {
+    
+    // --- View Mode Management ---
+    let currentViewMode = 'grid'; // 'grid' | 'table' | 'kanban'
+    let currentJobsList = [];
+    let selectedJobIndex = -1;
+
+    function switchView(mode, el) {
+      currentViewMode = mode;
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      if (el) el.classList.add('active');
+
+      document.getElementById('jobs-container').style.display = mode === 'grid' ? 'grid' : 'none';
+      document.getElementById('table-view-container').style.display = mode === 'table' ? 'block' : 'none';
+      document.getElementById('kanban-view-container').style.display = mode === 'kanban' ? 'grid' : 'none';
+
+      renderActiveView();
+    }
+
+    function renderActiveView() {
+      if (currentViewMode === 'grid') renderGridJobs(currentJobsList);
+      else if (currentViewMode === 'table') renderTableJobs(currentJobsList);
+      else if (currentViewMode === 'kanban') renderKanbanJobs(currentJobsList);
+    }
+
+    function detectEligibility(loc, desc) {
+      const blob = (loc + " " + (desc || "")).toLowerCase();
+      if (blob.includes("us only") || blob.includes("must reside in the united states") || blob.includes("usa only")) {
+        return { label: "📍 US Restreint", cls: "eligibility-us" };
+      }
+      if (blob.includes("europe") || blob.includes("emea") || blob.includes("france") || blob.includes("germany") || blob.includes("berlin") || blob.includes("uk") || blob.includes("paris")) {
+        return { label: "🌍 Éligible Europe", cls: "eligibility-eu" };
+      }
+      return { label: "🌐 Full Remote Global", cls: "eligibility-anywhere" };
+    }
+
+    function renderGridJobs(jobs) {
       const container = document.getElementById('jobs-container');
       if (!jobs || jobs.length === 0) {
         container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">AUCUNE OFFRE TROUVÉE.</div>`;
         return;
       }
 
-      container.innerHTML = jobs.map(j => {
+      container.innerHTML = jobs.map((j, idx) => {
         const score = j.fit_score ? j.fit_score.toFixed(1) : '0.0';
-        let badgeClass = 'score-low';
-        if (j.fit_score >= 8.5) badgeClass = 'score-hot';
-        else if (j.fit_score >= 7.5) badgeClass = 'score-high';
+        const numScore = j.fit_score || 0;
+        
+        let strokeColor = 'var(--text-muted)';
+        if (numScore >= 8.5) strokeColor = 'var(--color-hot)';
+        else if (numScore >= 7.5) strokeColor = 'var(--accent)';
 
-        const tagsHtml = (j.tech_match || '').split(',').filter(Boolean).slice(0, 4).map(t => `<span class="tech-tag">${esc(t.trim())}</span>`).join('');
-        let typeBadge = j.job_type === 'part_time' ? '<span class="tech-tag" style="border-color:var(--color-pt);color:var(--color-pt);">FLEX</span>' : '';
-        if (j.job_type === 'contract') typeBadge = '<span class="tech-tag" style="border-color:#33ffcc;color:#33ffcc;">CONTRACT</span>';
+        // 44px ring: radius = 18, circumference = 2 * PI * 18 = 113.1
+        const circ = 113.1;
+        const progress = Math.min(Math.max(numScore / 10, 0), 1);
+        const dashoffset = circ * (1 - progress);
+
+        const elig = detectEligibility(j.location || '', j.description || '');
+        const techList = (j.tech_match || '').split(',').filter(Boolean).slice(0, 4);
+        const tagsHtml = techList.map(t => `<span class="tech-tag">${esc(t.trim())}</span>`).join('');
+        
+        let typeBadge = j.job_type === 'part_time' ? '<span class="tech-tag" style="border-color:var(--color-pt);color:var(--color-pt);">⏱️ PART-TIME</span>' : '';
+        if (j.job_type === 'contract') typeBadge = '<span class="tech-tag" style="border-color:#33ffcc;color:#33ffcc;">⚡ FREELANCE</span>';
+
+        const isSelected = idx === selectedJobIndex;
 
         return `
-          <div class="job-card">
+          <div class="job-card ${isSelected ? 'keyboard-selected' : ''}" data-job-id="${esc(j.id)}" data-idx="${idx}" onclick="selectJobByIndex(${idx})">
             <div>
               <div class="job-header">
                 <div>
                   <div class="job-company">${esc(j.company || 'UNKNOWN')}</div>
                   <div class="job-title">${esc(j.title || 'NULL')}</div>
+                  <div style="margin-top: 6px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <span class="eligibility-pill ${elig.cls}">${elig.label}</span>
+                    ${typeBadge}
+                  </div>
                 </div>
-                <div class="score-badge ${badgeClass}">${score}/10</div>
+
+                <!-- Circular Score Ring -->
+                <div class="score-ring-wrap" title="Score de Pertinence : ${score}/10">
+                  <svg class="score-ring-svg" viewBox="0 0 44 44">
+                    <circle class="score-ring-bg" cx="22" cy="22" r="18" />
+                    <circle class="score-ring-progress" cx="22" cy="22" r="18" 
+                            stroke="${strokeColor}" 
+                            stroke-dasharray="${circ}" 
+                            stroke-dashoffset="${dashoffset}" />
+                  </svg>
+                  <span class="score-ring-val" style="color: ${strokeColor};">${score}</span>
+                </div>
               </div>
+
               <div class="job-meta">
-                <span>[${esc(j.location || 'Remote')}]</span>
-                <span>[SRC:${esc(j.source || 'ATS')}]</span>
-                ${typeBadge}
+                <span>📍 ${esc(j.location || 'Remote')}</span>
+                <span>•</span>
+                <span>SRC:${esc(j.source || 'ATS')}</span>
               </div>
-              <div style="margin-top: 12px;" class="tech-badges">${tagsHtml}</div>
-              ${j.pitch_hook ? `<div class="job-hook" style="margin-top:12px;">"${esc(j.pitch_hook)}"</div>` : ''}
+
+              <div style="margin-top: 10px;" class="tech-badges">${tagsHtml}</div>
+
+              <!-- Collapsible Pitch Accordion -->
+              ${j.pitch_hook ? `
+                <div style="margin-top: 10px;">
+                  <button class="pitch-toggle" onclick="togglePitch(this, event)">▶ Pitch personnalisé IA</button>
+                  <div class="pitch-collapse">
+                    <div class="job-hook" style="margin-top: 6px;">"${esc(j.pitch_hook)}"</div>
+                  </div>
+                </div>
+              ` : ''}
             </div>
+
             <div class="job-footer">
               <div class="action-group">
                 <button class="btn" onclick="viewJobDetail('${esc(j.id)}')">DÉTAILS</button>
@@ -1571,6 +1973,7 @@
               <select class="status-select" onchange="updateJobStatus('${esc(j.id)}', this.value)">
                 <option value="hot" ${j.status === 'hot' ? 'selected' : ''}>🔥 HOT</option>
                 <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>📬 POSTULÉ</option>
+                <option value="interview" ${j.status === 'interview' ? 'selected' : ''}>🎯 ENTRETIEN</option>
                 <option value="archived" ${j.status === 'archived' ? 'selected' : ''}>📦 ARCHIVER</option>
               </select>
             </div>
@@ -1578,6 +1981,109 @@
         `;
       }).join('');
     }
+
+    function togglePitch(btn, evt) {
+      if (evt) evt.stopPropagation();
+      const collapse = btn.nextElementSibling;
+      if (!collapse) return;
+      const isOpen = collapse.classList.contains('open');
+      if (isOpen) {
+        collapse.classList.remove('open');
+        btn.textContent = '▶ Pitch personnalisé IA';
+      } else {
+        collapse.classList.add('open');
+        btn.textContent = '▼ Masquer le pitch';
+      }
+    }
+
+    function renderTableJobs(jobs) {
+      const tbody = document.getElementById('table-body');
+      if (!tbody) return;
+      if (!jobs || jobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">Aucune offre trouvée.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = jobs.map((j, idx) => {
+        const score = j.fit_score ? j.fit_score.toFixed(1) : '0.0';
+        const elig = detectEligibility(j.location || '', j.description || '');
+        const tech = (j.tech_match || '').split(',').slice(0, 3).join(', ');
+        
+        return `
+          <tr onclick="selectJobByIndex(${idx}); viewJobDetail('${esc(j.id)}')" style="cursor: pointer;">
+            <td style="font-weight: 700; color: ${j.fit_score >= 7.5 ? 'var(--accent)' : 'inherit'};">${score}/10</td>
+            <td style="font-weight: 600; color: var(--brand-red);">${esc(j.company)}</td>
+            <td style="font-weight: 500;">${esc(j.title)}</td>
+            <td><span class="eligibility-pill ${elig.cls}">${elig.label}</span></td>
+            <td>${esc(j.job_type || 'full_time')}</td>
+            <td style="color: var(--text-muted); font-size: 11px;">${esc(tech)}</td>
+            <td onclick="event.stopPropagation();">
+              <div style="display: flex; gap: 4px;">
+                <button class="btn" style="padding: 3px 7px; font-size: 10px;" onclick="triggerAutoFill('${esc(j.id)}')">AUTO-FILL</button>
+                ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" class="btn" style="padding: 3px 6px; font-size: 10px; text-decoration: none;">↗</a>` : ''}
+              </div>
+            </td>
+            <td onclick="event.stopPropagation();">
+              <select class="status-select" style="padding: 2px 4px; font-size: 10px; height: 22px;" onchange="updateJobStatus('${esc(j.id)}', this.value)">
+                <option value="hot" ${j.status === 'hot' ? 'selected' : ''}>🔥 HOT</option>
+                <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>📬 POSTULÉ</option>
+                <option value="interview" ${j.status === 'interview' ? 'selected' : ''}>🎯 ENTRETIEN</option>
+                <option value="archived" ${j.status === 'archived' ? 'selected' : ''}>📦 ARCHIVER</option>
+              </select>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderKanbanJobs(jobs) {
+      const groups = { hot: [], applied: [], interview: [], archived: [] };
+      jobs.forEach(j => {
+        const st = j.status || 'hot';
+        if (groups[st]) groups[st].push(j);
+        else groups.hot.push(j);
+      });
+
+      ['hot', 'applied', 'interview', 'archived'].forEach(k => {
+        const countEl = document.getElementById(`k-count-${k}`);
+        if (countEl) countEl.textContent = groups[k].length;
+
+        const cardsEl = document.getElementById(`k-cards-${k}`);
+        if (cardsEl) {
+          cardsEl.innerHTML = groups[k].map(j => `
+            <div class="job-card" style="padding: 14px; gap: 8px; cursor: pointer;" onclick="viewJobDetail('${esc(j.id)}')">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <span class="job-company">${esc(j.company)}</span>
+                <span style="font-weight: 700; font-size: 11px;">${j.fit_score ? j.fit_score.toFixed(1) : '0'}/10</span>
+              </div>
+              <div style="font-size: 13px; font-weight: 600; line-height: 1.25;">${esc(j.title)}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span style="font-size: 10px; color: var(--text-muted);">${esc(j.source)}</span>
+                <button class="btn" style="padding: 2px 6px; font-size: 9.5px;" onclick="event.stopPropagation(); triggerAutoFill('${esc(j.id)}')">FILL</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      });
+    }
+
+    function selectJobByIndex(idx) {
+      selectedJobIndex = idx;
+      document.querySelectorAll('.job-card').forEach((c, i) => {
+        if (i === idx) c.classList.add('keyboard-selected');
+        else c.classList.remove('keyboard-selected');
+      });
+      const selectedCard = document.querySelector(`.job-card[data-idx="${idx}"]`);
+      if (selectedCard) {
+        selectedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function renderJobs(jobs) {
+      currentJobsList = jobs || [];
+      renderActiveView();
+    }
+
 
     async function viewJobDetail(jobId) {
       try {
@@ -1685,7 +2191,7 @@
 
     async function copyPitchAction(jobId) {
       try {
-        await fetch(`/api/jobs/${jobId}/copy-pitch`, { method: 'POST' });
+        if (currentModalJob && currentModalJob.tailored_pitch) { await navigator.clipboard.writeText(currentModalJob.tailored_pitch); } else { await fetch(`/api/jobs/${jobId}/copy-pitch`, { method: 'POST' }); }
         showToast('COPIED TO CLIPBOARD');
       } catch (e) { showToast('ERR: COPY FAILED'); }
     }
@@ -1747,14 +2253,81 @@
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 3000);
     }
+    
+    // --- Power-User Keyboard Navigation (J / K / A / X / Enter / Ctrl+K) ---
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { closeModal(); closeLogsModal(); }
-      else if (e.key === '/' && document.activeElement !== document.getElementById('search-box')) {
-        e.preventDefault(); document.getElementById('search-box').focus();
+      // Ignore if user is typing in an input or textarea
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        if (e.key === 'Escape') document.activeElement.blur();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        closeModal();
+        closeLogsModal();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchBox = document.getElementById('search-box');
+        if (searchBox) { searchBox.focus(); searchBox.select(); }
+        return;
+      }
+
+      if (e.key === '/' && document.activeElement !== document.getElementById('search-box')) {
+        e.preventDefault();
+        document.getElementById('search-box').focus();
+        return;
+      }
+
+      if (!currentJobsList || currentJobsList.length === 0) return;
+
+      // J: Next card
+      if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        if (selectedJobIndex < currentJobsList.length - 1) {
+          selectJobByIndex(selectedJobIndex + 1);
+        } else {
+          selectJobByIndex(0);
+        }
+      }
+      // K: Previous card
+      else if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        if (selectedJobIndex > 0) {
+          selectJobByIndex(selectedJobIndex - 1);
+        } else {
+          selectJobByIndex(currentJobsList.length - 1);
+        }
+      }
+      // Enter: View Details
+      else if (e.key === 'Enter') {
+        if (selectedJobIndex >= 0 && selectedJobIndex < currentJobsList.length) {
+          e.preventDefault();
+          viewJobDetail(currentJobsList[selectedJobIndex].id);
+        }
+      }
+      // A: Auto-Fill
+      else if (e.key === 'a' || e.key === 'A') {
+        if (selectedJobIndex >= 0 && selectedJobIndex < currentJobsList.length) {
+          e.preventDefault();
+          triggerAutoFill(currentJobsList[selectedJobIndex].id);
+        }
+      }
+      // X: Archive Job
+      else if (e.key === 'x' || e.key === 'X') {
+        if (selectedJobIndex >= 0 && selectedJobIndex < currentJobsList.length) {
+          e.preventDefault();
+          const targetJob = currentJobsList[selectedJobIndex];
+          updateJobStatus(targetJob.id, 'archived');
+          showToast(`📦 Archivé : ${targetJob.company}`);
+        }
       }
     });
 
-    initTheme(); loadStats(); loadJobs(); setInterval(loadStats, 5000);
+
+    initTheme(); loadStats(); loadJobs(); loadHealthStatus(); setInterval(loadStats, 5000);
   </script>
 </body>
 </html>

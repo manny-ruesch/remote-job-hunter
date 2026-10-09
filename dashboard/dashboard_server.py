@@ -226,6 +226,17 @@ def _run_hunter_worker():
     bat_path = HUNTER_DIR / "run_hunter.bat"
     subprocess.run(["cmd.exe", "/c", str(bat_path)], cwd=str(HUNTER_DIR))
 
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "gemini_model": config.GEMINI_MODEL,
+        "gemini_status": "operational" if bool(config.GOOGLE_API_KEY) else "unconfigured",
+        "database": "sqlite_wal",
+        "sources_count": 47,
+        "active_profile": cv_profiler.get_active_profile().get("target_role", "AI Automation Builder")
+    }
+
 @app.get("/api/candidate-profile")
 async def get_candidate_profile():
     return cv_profiler.get_active_profile()
