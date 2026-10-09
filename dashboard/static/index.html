@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Job Hunter — Arachnid Engine</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;300;400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #030303;
+      --card: #0a0a0a;
+      --border: rgba(255, 255, 255, 0.15);
+      --border-hover: rgba(255, 255, 255, 0.8);
+      --text: #d4d4d4;
+      --text-muted: #666666;
+      --accent: #ffffff;
+      --accent-glow: 0 0 15px rgba(255, 255, 255, 0.6);
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --color-hot: #ff4444;
+      --color-hot-bg: rgba(255, 68, 68, 0.1);
+      --color-pt: #a020f0;
+      --color-pt-bg: rgba(160, 32, 240, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      background: radial-gradient(circle at 50% 25%, #080808 0%, #020202 85%);
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Header */
+    header {
+      background: rgba(0,0,0,0.6);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 36px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    
+    .header-left { display: flex; align-items: center; }
+    .header-center { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.brand-avatar { width: 72px; height: 72px; background: #000; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 6px; cursor: pointer; transition: all 0.3s ease; }
+    .brand-avatar:hover { border-color: var(--accent); box-shadow: var(--accent-glow); transform: scale(1.05); }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-shadow: var(--accent-glow);
+    }
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-badge.running {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+    
+    .status-badge.running .dot {
+      animation: status-pulse 1s infinite;
+    }
+    @keyframes status-pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.5); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: currentColor;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: #000;
+      color: var(--accent);
+    }
+
+    
+    .logo-spider-body {
+      position: relative;
+      width: 6px; height: 6px; background: var(--accent);
+      box-shadow: 
+        -5px -5px 0 var(--accent), 5px -5px 0 var(--accent),
+        -8px 0 0 var(--accent), 8px 0 0 var(--accent),
+        -5px 5px 0 var(--accent), 5px 5px 0 var(--accent),
+        var(--accent-glow);
+      animation: spider-breathe 3s infinite;
+    }
+    @keyframes spider-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    
+    .spider-frame-1 { animation: flash1 0.4s infinite steps(1); }
+    .spider-frame-2 { animation: flash2 0.4s infinite steps(1); }
+    @keyframes flash1 { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+    @keyframes flash2 { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    .brand-avatar svg { animation: spider-bounce 0.4s infinite steps(1); }
+    @keyframes spider-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1px); } }
+
+    
+    /* Web Canvas & Direction 1 Motion */
+    #web-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .job-card.pulse-hit {
+      border-color: #ffffff !important;
+      box-shadow: 0 0 28px rgba(255, 255, 255, 0.75), inset 0 0 16px rgba(255, 255, 255, 0.18) !important;
+      transform: translateY(-3px) scale(1.02);
+      transition: all 0.08s ease-out !important;
+    }
+    .job-card.thread-targeted {
+      border-color: rgba(255, 255, 255, 0.9) !important;
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.25) !important;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 28px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 26px;
+    }
+
+    /* Spider Dropzone */
+    .dropzone-container {
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+      padding: 40px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .dropzone-container:hover, .dropzone-container.dragover {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 20px rgba(255,255,255,0.05), var(--accent-glow);
+    }
+    .dropzone-title {
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .dropzone-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    /* Pixel Spider Pet */
+    #spider-pet {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 32px;
+      height: 32px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .spider-thread {
+      position: absolute;
+      width: 1px;
+      background: var(--accent);
+      left: 50%;
+      bottom: 50%;
+      height: 500px;
+      opacity: 0.5;
+    }
+    .pixel-spider-body {
+      position: absolute;
+      width: 12px; height: 12px;
+      background: var(--accent);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 
+        -8px -8px 0 var(--accent), 8px -8px 0 var(--accent),
+        -12px 0 0 var(--accent), 12px 0 0 var(--accent),
+        -8px 8px 0 var(--accent), 8px 8px 0 var(--accent),
+        var(--accent-glow);
+    }
+
+    .ai-status {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 20px;
+      height: 16px;
+      display: none;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* KPI Row */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    .kpi-card {
+      background: var(--card);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .kpi-card:hover {
+      background: #111;
+    }
+    .kpi-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .kpi-val {
+      font-size: 32px;
+      font-weight: 100;
+      color: var(--accent);
+    }
+
+    /* Controls */
+    .controls-card {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      padding: 6px 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--card);
+      transition: all 0.2s;
+    }
+    .filter-chip:hover, .filter-chip.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+    .chip-count {
+      margin-left: 6px;
+      opacity: 0.7;
+    }
+
+    .search-input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      width: 280px;
+      background: var(--card);
+      color: var(--accent);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: var(--accent-glow);
+      width: 320px;
+    }
+
+    /* Jobs Grid */
+    .jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 20px;
+    }
+    .job-card {
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      opacity: 1;
+    }
+    .job-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: var(--border);
+      transition: all 0.2s;
+    }
+    .job-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+    .job-card:hover::before {
+      background: var(--accent);
+      box-shadow: var(--accent-glow);
+    }
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .job-company {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .job-title {
+      font-size: 18px;
+      font-weight: 300;
+      color: var(--accent);
+      line-height: 1.3;
+    }
+    .job-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .score-badge {
+      padding: 4px 8px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+    }
+    .score-hot { border-color: var(--color-hot); color: var(--color-hot); box-shadow: 0 0 8px rgba(255,51,51,0.3); }
+    .score-high { border-color: var(--accent); color: var(--accent); }
+
+    .tech-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tech-tag {
+      padding: 2px 6px;
+      font-size: 10px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .job-hook {
+      font-size: 12px;
+      color: #aaa;
+      border-left: 2px solid var(--border);
+      padding-left: 12px;
+      font-style: italic;
+    }
+
+    .job-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      flex-wrap: nowrap;
+    }
+    .action-group { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+    .status-select {
+      padding: 4px 8px;
+      background: #000;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      outline: none;
+      height: 26px; /* Matches buttons */
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 100; padding: 24px;
+    }
+    .modal-card {
+      background: #050505;
+      border: 1px solid var(--accent);
+      box-shadow: var(--accent-glow);
+      width: 100%; max-width: 900px; max-height: 90vh;
+      overflow-y: auto; padding: 32px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 16px;
+    }
+    .modal-tabs {
+      display: flex; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; overflow-x: auto;
+    }
+    .modal-tab {
+      padding: 6px 12px; font-size: 11px; text-transform: uppercase;
+      color: var(--text-muted); cursor: pointer; border: 1px solid transparent;
+    }
+    .modal-tab.active { border-color: var(--accent); color: var(--accent); box-shadow: var(--accent-glow); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .code-box {
+      background: #000; border: 1px solid var(--border); padding: 16px;
+      font-size: 12px; line-height: 1.5; color: var(--text);
+      white-space: pre-wrap; max-height: 320px; overflow-y: auto;
+    }
+    .mermaid-box {
+      background: #000; border: 1px solid var(--border); padding: 16px; overflow-x: auto;
+    }
+    .mermaid-box svg * { color: var(--accent) !important; stroke: var(--accent) !important; }
+    .mermaid-box svg .node rect { fill: #000 !important; }
+    .mermaid-box svg .cluster rect { fill: #111 !important; stroke: var(--border) !important; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--accent); color: #000;
+      padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      box-shadow: var(--accent-glow); display: none; z-index: 200;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="web-canvas"></canvas>
+
+  <header>
+    <div class="header-left">
+      <div class="brand-avatar" id="logo-pet" title="Noir Webling">
+        <img src="/static/pet_anim_192.gif" style="width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated;" alt="Noir Webling">
+      </div>
+    </div>
+    
+    <div class="header-center">
+      <div class="brand-title">Remote Job Hunter</div>
+      <div class="brand-subtitle">AI Command Center</div>
+    </div>
+    
+    <div class="header-actions">
+      <div id="status-pill" class="status-badge">
+        <span class="dot"></span>
+        <span id="status-text">VEILLE ACTIVE</span>
+      </div>
+      <button class="btn" onclick="openLogsModal()">LOGS</button>
+      <button class="btn btn-primary" onclick="triggerHunterRun()">LANCER LE SCAN</button>
+    </div>
+  </header>
+
+  <div class="container">
+    
+    <!-- CV Dropzone / Spider Trap -->
+    <div class="dropzone-container" id="dropzone" onclick="document.getElementById('cv-upload').click()">
+      <div id="spider-pet">
+        <div class="spider-thread"></div>
+        <div class="pixel-spider-body"></div>
+      </div>
+      <input type="file" id="cv-upload" style="display: none" accept="application/pdf" onchange="handleFileUpload(event)">
+      <div id="dropzone-content">
+        <div class="dropzone-title" id="drop-title">GLISSEZ VOTRE CV ICI</div>
+        <div class="dropzone-sub" id="drop-sub">L'IA analysera votre profil et reconfigurera les 47 sources.</div>
+      </div>
+      <div class="ai-status" id="ai-status"></div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">OFFRES SCANNÉES</div>
+        <div class="kpi-val" id="kpi-total">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">HOT MATCHES</div>
+        <div class="kpi-val" id="kpi-hot" style="color: var(--color-hot); text-shadow: 0 0 10px rgba(255,51,51,0.5);">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">PART-TIME / FREELANCE</div>
+        <div class="kpi-val" id="kpi-parttime" style="color: var(--color-pt); text-shadow: 0 0 10px rgba(160,32,240,0.5);">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">CANDIDATURES</div>
+        <div class="kpi-val" id="kpi-applied">-</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-card">
+      <div class="filters">
+        <div class="filter-chip active" onclick="setFilter('hot', this)">Hot Matches <span class="chip-count" id="count-hot">0</span></div>
+        <div class="filter-chip" onclick="setFilter('part_time', this)">Part-Time <span class="chip-count" id="count-pt">0</span></div>
+        <div class="filter-chip" onclick="setFilter('all', this)">Toutes les Offres <span class="chip-count" id="count-all">0</span></div>
+        <div class="filter-chip" onclick="setFilter('applied', this)">Postulées <span class="chip-count" id="count-applied">0</span></div>
+      </div>
+
+      <input type="text" class="search-input" id="search-box" placeholder="Rechercher une entreprise, un rôle... (Touche '/')" oninput="handleSearch()">
+    </div>
+
+    <!-- Jobs Grid -->
+    <div class="jobs-grid" id="jobs-container">
+      <!-- Injected dynamically -->
+    </div>
+
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div class="job-company" id="modal-company">COMPANY</div>
+          <div class="job-title" id="modal-title">Job Title</div>
+          <div class="job-meta" id="modal-meta">Location • Source</div>
+        </div>
+        <button class="btn" onclick="closeModal()">[X]</button>
+      </div>
+
+      <!-- Action Bar inside Modal -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="modal-action-bar"></div>
+
+      <!-- Tabs Navigation -->
+      <div class="modal-tabs">
+        <div class="modal-tab active" onclick="switchModalTab('pitch', this)">PITCH</div>
+        <div class="modal-tab" onclick="switchModalTab('pow', this)">ARCHITECTURE POW</div>
+        <div class="modal-tab" onclick="switchModalTab('cold', this)">COLD OUTREACH</div>
+        <div class="modal-tab" onclick="switchModalTab('cover', this)">COVER LETTER PDF</div>
+      </div>
+
+      <!-- Tab Contents -->
+      <div id="tab-pitch" class="tab-content active"></div>
+      <div id="tab-pow" class="tab-content"></div>
+      <div id="tab-cold" class="tab-content"></div>
+      <div id="tab-cover" class="tab-content"></div>
+
+    </div>
+  </div>
+
+  <!-- Logs Modal -->
+  <div class="modal-overlay" id="logs-modal" onclick="closeLogsModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 900px;">
+      <div class="modal-header">
+        <div class="brand-title">JOURNAL D'EXÉCUTION</div>
+        <button class="btn" onclick="closeLogsModal()">[X]</button>
+      </div>
+      <div class="code-box" id="logs-content" style="max-height: 500px;">Loading...</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Notification</div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+    let currentFilter = 'hot';
+    let currentSearch = '';
+    let currentModalJob = null;
+
+    
+  // ========================================================
+  // DIRECTION 1: LA TOILE VIVANTE, ONDE RADAR & FILS SOIE
+  // ========================================================
+  (function initSpiderWebEngine() {
+    const canvas = document.getElementById('web-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      buildWebGeometry();
+    });
+
+    let mouse = { x: -1000, y: -1000 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+    window.addEventListener('mouseleave', () => {
+      mouse.x = -1000;
+      mouse.y = -1000;
+    });
+
+    const SPOKES = 18;
+    const RINGS = 11;
+    let nodes = [];
+    let origin = { x: width / 2, y: Math.min(260, height * 0.35) };
+
+    function buildWebGeometry() {
+      origin = { x: width / 2, y: Math.min(260, height * 0.35) };
+      nodes = [];
+      const maxRadius = Math.max(width, height) * 0.95;
+
+      for (let s = 0; s < SPOKES; s++) {
+        const angle = (s / SPOKES) * Math.PI * 2;
+        const spokeNodes = [];
+        for (let r = 0; r < RINGS; r++) {
+          const distance = Math.pow((r + 1) / RINGS, 1.25) * maxRadius;
+          const x = origin.x + Math.cos(angle) * distance;
+          const y = origin.y + Math.sin(angle) * distance;
+          spokeNodes.push({
+            restX: x,
+            restY: y,
+            x: x,
+            y: y,
+            vx: 0,
+            vy: 0,
+            spoke: s,
+            ring: r,
+            distance: distance,
+            angle: angle,
+          });
+        }
+        nodes.push(spokeNodes);
+      }
+    }
+    buildWebGeometry();
+
+    let hoveredCard = null;
+    document.addEventListener('mouseover', (e) => {
+      const card = e.target.closest('.job-card');
+      if (card) {
+        hoveredCard = card;
+        card.classList.add('thread-targeted');
+      }
+    });
+    document.addEventListener('mouseout', (e) => {
+      const card = e.target.closest('.job-card');
+      if (card && card === hoveredCard) {
+        card.classList.remove('thread-targeted');
+        hoveredCard = null;
+      }
+    });
+
+    window.activeShockwaves = [];
+    window.triggerSonarRadarWave = function(originX, originY) {
+      const logoPet = document.getElementById('logo-pet');
+      let ox = originX;
+      let oy = originY;
+      if (ox === undefined || oy === undefined) {
+        if (logoPet) {
+          const rect = logoPet.getBoundingClientRect();
+          ox = rect.left + rect.width / 2;
+          oy = rect.top + rect.height / 2;
+        } else {
+          ox = origin.x;
+          oy = origin.y;
+        }
+      }
+
+      const maxR = Math.hypot(width, height) * 1.15;
+      window.activeShockwaves.push({
+        x: ox,
+        y: oy,
+        radius: 0,
+        maxRadius: maxR,
+        speed: 22,
+        cardsHit: new Set()
+      });
+
+      for (let s = 0; s < SPOKES; s++) {
+        for (let r = 0; r < RINGS; r++) {
+          const n = nodes[s][r];
+          const d = Math.hypot(n.x - ox, n.y - oy);
+          if (d < 400) {
+            const force = (400 - d) * 0.04;
+            n.vx += (Math.random() - 0.5) * force;
+            n.vy += (Math.random() - 0.5) * force;
+          }
+        }
+      }
+    };
+
+    const SPRING = 0.065;
+    const DAMPING = 0.88;
+    const INFLUENCE_DIST = 95;
+
+    function render(time) {
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Physics update
+      for (let s = 0; s < SPOKES; s++) {
+        for (let r = 0; r < RINGS; r++) {
+          const n = nodes[s][r];
+          const ax = (n.restX - n.x) * SPRING;
+          const ay = (n.restY - n.y) * SPRING;
+          n.vx = (n.vx + ax) * DAMPING;
+          n.vy = (n.vy + ay) * DAMPING;
+
+          const dx = n.x - mouse.x;
+          const dy = n.y - mouse.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < INFLUENCE_DIST && dist > 1) {
+            const push = (1 - dist / INFLUENCE_DIST) * 4.2;
+            n.vx += (dx / dist) * push;
+            n.vy += (dy / dist) * push;
+          }
+
+          n.x += n.vx;
+          n.y += n.vy;
+        }
+      }
+
+      // 2. Radial Spokes
+      ctx.lineWidth = 1;
+      for (let s = 0; s < SPOKES; s++) {
+        ctx.beginPath();
+        ctx.moveTo(origin.x, origin.y);
+        for (let r = 0; r < RINGS; r++) {
+          ctx.lineTo(nodes[s][r].x, nodes[s][r].y);
+        }
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+        ctx.stroke();
+      }
+
+      // 3. Web Rings
+      for (let r = 0; r < RINGS; r++) {
+        ctx.beginPath();
+        for (let s = 0; s < SPOKES; s++) {
+          const curr = nodes[s][r];
+          const next = nodes[(s + 1) % SPOKES][r];
+          if (s === 0) ctx.moveTo(curr.x, curr.y);
+          const midX = (curr.x + next.x) / 2;
+          const midY = (curr.y + next.y) / 2;
+          const sag = 0.92;
+          const ctrlX = origin.x + (midX - origin.x) * sag;
+          const ctrlY = origin.y + (midY - origin.y) * sag;
+          ctx.quadraticCurveTo(ctrlX, ctrlY, next.x, next.y);
+        }
+        const ringAlpha = 0.035 + (r / RINGS) * 0.05;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
+        ctx.stroke();
+      }
+
+      // 4. Silk Thread to Hovered Job Card
+      if (hoveredCard) {
+        const logoPet = document.getElementById('logo-pet');
+        if (logoPet) {
+          const lRect = logoPet.getBoundingClientRect();
+          const cRect = hoveredCard.getBoundingClientRect();
+
+          const startX = lRect.left + lRect.width / 2;
+          const startY = lRect.top + lRect.height / 2;
+          const targetX = cRect.left + cRect.width / 2;
+          const targetY = cRect.top + 10;
+
+          const wave = Math.sin((time || 0) * 0.008) * 3.5;
+          const ctrlX = (startX + targetX) / 2 + wave;
+          const ctrlY = (startY + targetY) / 2 - 25;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+          ctx.lineWidth = 1.5;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(targetX, targetY, 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#ffffff';
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // 5. Active Sonar Radar Shockwaves
+      if (window.activeShockwaves.length > 0) {
+        const allCards = document.querySelectorAll('.job-card');
+
+        for (let i = window.activeShockwaves.length - 1; i >= 0; i--) {
+          const sw = window.activeShockwaves[i];
+          sw.radius += sw.speed;
+          const progress = sw.radius / sw.maxRadius;
+          const alpha = Math.max(0, 1 - progress);
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.75})`;
+          ctx.lineWidth = 2.5;
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+          ctx.stroke();
+
+          if (sw.radius > 35) {
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y, sw.radius - 28, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.35})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          allCards.forEach((card) => {
+            if (!sw.cardsHit.has(card)) {
+              const rect = card.getBoundingClientRect();
+              const cardCenterX = rect.left + rect.width / 2;
+              const cardCenterY = rect.top + rect.height / 2;
+              const dist = Math.hypot(cardCenterX - sw.x, cardCenterY - sw.y);
+
+              if (Math.abs(dist - sw.radius) < 55) {
+                sw.cardsHit.add(card);
+                card.classList.add('pulse-hit');
+                setTimeout(() => {
+                  card.classList.remove('pulse-hit');
+                }, 420);
+              }
+            }
+          });
+
+          if (progress >= 1) {
+            window.activeShockwaves.splice(i, 1);
+          }
+        }
+      }
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+  })();
+
+
+    // --- Spider Pet Dropzone Logic ---
+    gsap.from(".dropzone-container", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" });
+    gsap.from(".kpi-card", { y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out", delay: 0.1 });
+    gsap.from(".controls-card", { y: 20, opacity: 0, duration: 0.8, ease: "power3.out", delay: 0.3 });
+
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) simulateAIAnalysis(e.dataTransfer.files[0]);
+    });
+    function handleFileUpload(e) {
+      if (e.target.files.length > 0) simulateAIAnalysis(e.target.files[0]);
+    }
+
+    async function simulateAIAnalysis(file) {
+      const content = document.getElementById('dropzone-content');
+      const spider = document.getElementById('spider-pet');
+      const status = document.getElementById('ai-status');
+      
+      gsap.to(content, { opacity: 0.2, duration: 0.4 });
+      status.style.display = 'block';
+      
+      // Spider descends
+      gsap.to(spider, { top: "50%", duration: 0.8, ease: "bounce.out" });
+      // Spider spins web (moves side to side)
+      gsap.to(spider, { left: "40%", duration: 0.2, yoyo: true, repeat: 10, ease: "power1.inOut", delay: 0.8 });
+      
+      const steps = [
+        "Lecture du document...",
+        "Analyse sémantique Gemini...",
+        "Extraction de vos compétences...",
+        "Reconfiguration des heuristiques...",
+        "Lancement de la recherche..."
+      ];
+
+      for (let i = 0; i < steps.length; i++) {
+        status.textContent = steps[i];
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      // Spider retracts
+      gsap.killTweensOf(spider, "left");
+      gsap.to(spider, { top: "-30px", left: "50%", duration: 0.6, ease: "power3.in" });
+      
+      status.style.color = "var(--accent)";
+      status.style.textShadow = "var(--accent-glow)";
+      status.textContent = "✅ Intelligence Artificielle reconfigurée avec succès !";
+      
+      document.getElementById('drop-title').textContent = "PROFIL ACTIF";
+      document.getElementById('drop-sub').textContent = "Fichier lu : " + file.name;
+      gsap.to(content, { opacity: 1, duration: 0.4 });
+
+      triggerJobsRefreshAnimation();
+    }
+
+    function triggerJobsRefreshAnimation() {
+      loadJobs();
+    }
+
+    const logoPet = document.getElementById('logo-pet');
+    if (logoPet) {
+      logoPet.addEventListener('mouseenter', () => {
+        gsap.to('#logo-pet svg', { rotation: 180, scale: 1.5, duration: 0.4, ease: "back.out(1.7)" });
+      });
+      logoPet.addEventListener('mouseleave', () => {
+        gsap.to('#logo-pet svg', { rotation: 0, scale: 1, duration: 0.4, ease: "power2.out" });
+      });
+    }
+
+    // --- App Logic ---
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const d = await res.json();
+        document.getElementById('kpi-total').textContent = d.total_scouted || 0;
+        document.getElementById('kpi-hot').textContent = d.hot_qualified || 0;
+        document.getElementById('kpi-applied').textContent = d.applied_count || 0;
+        document.getElementById('kpi-parttime').textContent = d.part_time_count || 0;
+
+        document.getElementById('count-hot').textContent = d.hot_qualified || 0;
+        document.getElementById('count-all').textContent = d.total_scouted || 0;
+        document.getElementById('count-applied').textContent = d.applied_count || 0;
+        document.getElementById('count-pt').textContent = d.part_time_count || 0;
+
+        const pill = document.getElementById('status-pill');
+        const text = document.getElementById('status-text');
+        if (d.is_running) {
+          pill.className = 'status-badge running';
+          text.textContent = 'SCAN EN COURS';
+        } else {
+          pill.className = 'status-badge';
+          text.textContent = 'VEILLE ACTIVE';
+        }
+      } catch (e) { console.error('Stats error:', e); }
+    }
+
+    async function loadJobs() {
+      try {
+        let url = `/api/jobs?limit=500`;
+        if (currentFilter === 'hot') url += '&min_score=7.5';
+        else if (currentFilter === 'part_time') url += '&job_type=part_time';
+        else if (currentFilter !== 'all') url += `&status=${currentFilter}`;
+        
+        if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+
+        const res = await fetch(url);
+        let jobs = await res.json();
+        if (currentFilter === 'part_time') jobs = jobs.filter(j => j.job_type === 'part_time' || j.job_type === 'contract');
+        
+        renderJobs(jobs);
+      } catch (e) { console.error('Jobs error:', e); }
+    }
+
+    function renderJobs(jobs) {
+      const container = document.getElementById('jobs-container');
+      if (!jobs || jobs.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 48px; color: var(--text-muted);">AUCUNE OFFRE TROUVÉE.</div>`;
+        return;
+      }
+
+      container.innerHTML = jobs.map(j => {
+        const score = j.fit_score ? j.fit_score.toFixed(1) : '0.0';
+        let badgeClass = 'score-low';
+        if (j.fit_score >= 8.5) badgeClass = 'score-hot';
+        else if (j.fit_score >= 7.5) badgeClass = 'score-high';
+
+        const tagsHtml = (j.tech_match || '').split(',').filter(Boolean).slice(0, 4).map(t => `<span class="tech-tag">${t.trim()}</span>`).join('');
+        let typeBadge = j.job_type === 'part_time' ? '<span class="tech-tag" style="border-color:var(--color-pt);color:var(--color-pt);">FLEX</span>' : '';
+        if (j.job_type === 'contract') typeBadge = '<span class="tech-tag" style="border-color:#33ffcc;color:#33ffcc;">CONTRACT</span>';
+
+        return `
+          <div class="job-card">
+            <div>
+              <div class="job-header">
+                <div>
+                  <div class="job-company">${j.company || 'UNKNOWN'}</div>
+                  <div class="job-title">${j.title || 'NULL'}</div>
+                </div>
+                <div class="score-badge ${badgeClass}">${score}/10</div>
+              </div>
+              <div class="job-meta">
+                <span>[${j.location || 'Remote'}]</span>
+                <span>[SRC:${j.source || 'ATS'}]</span>
+                ${typeBadge}
+              </div>
+              <div style="margin-top: 12px;" class="tech-badges">${tagsHtml}</div>
+              ${j.pitch_hook ? `<div class="job-hook" style="margin-top:12px;">"${j.pitch_hook}"</div>` : ''}
+            </div>
+            <div class="job-footer">
+              <div class="action-group">
+                <button class="btn" onclick="viewJobDetail('${j.id}')">DÉTAILS</button>
+                <button class="btn btn-primary" onclick="triggerAutoFill('${j.id}')">AUTO-FILL</button>
+                ${j.url ? `<a href="${j.url}" target="_blank" class="btn" style="text-decoration: none;">LIEN ↗</a>` : ''}
+              </div>
+              <select class="status-select" onchange="updateJobStatus('${j.id}', this.value)">
+                <option value="hot" ${j.status === 'hot' ? 'selected' : ''}>🔥 HOT</option>
+                <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>📬 POSTULÉ</option>
+                <option value="archived" ${j.status === 'archived' ? 'selected' : ''}>📦 ARCHIVER</option>
+              </select>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function viewJobDetail(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`);
+        const j = await res.json();
+        currentModalJob = j;
+
+        document.getElementById('modal-company').textContent = j.company;
+        document.getElementById('modal-title').textContent = j.title;
+        document.getElementById('modal-meta').textContent = `${j.location} • ${j.source} • Score: ${j.fit_score ? j.fit_score.toFixed(1) : '0'}/10`;
+
+        document.getElementById('modal-action-bar').innerHTML = `
+          <button class="btn btn-primary" onclick="triggerAutoFill('${j.id}')">AUTO-FILL</button>
+          <button class="btn" onclick="quickGenerateCoverLetter('${j.id}')">CRÉER PDF</button>
+          ${j.url ? `<a href="${j.url}" target="_blank" class="btn" style="text-decoration: none;">LIEN OFFICIEL ↗</a>` : ''}
+        `;
+
+        document.getElementById('tab-pitch').innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="color: var(--accent);">PITCH GÉNÉRÉ</div>
+            <button class="btn" onclick="copyPitchAction('${j.id}')">COPY</button>
+          </div>
+          <div class="code-box">${j.tailored_pitch || 'NULL'}</div>
+        `;
+
+        if (j.proof_of_work && typeof j.proof_of_work === 'object') {
+          const pow = j.proof_of_work;
+          document.getElementById('tab-pow').innerHTML = `
+            ${pow.problem_diagnosis ? `<p style="margin-bottom: 12px;"><strong>> DIAGNOSIS:</strong><br>${pow.problem_diagnosis}</p>` : ''}
+            ${pow.solution_architecture ? `<p style="margin-bottom: 16px;"><strong>> ARCHITECTURE POW:</strong><br>${pow.solution_architecture}</p>` : ''}
+            ${pow.mermaid_diagram ? `<div class="mermaid-box"><pre class="mermaid">${pow.mermaid_diagram}</pre></div>` : ''}
+          `;
+        } else {
+          document.getElementById('tab-pow').innerHTML = `<p style="color: var(--text-muted);">INSUFFICIENT DATA.</p>`;
+        }
+
+        if (j.cold_outreach && typeof j.cold_outreach === 'object') {
+          const cold = j.cold_outreach;
+          document.getElementById('tab-cold').innerHTML = `
+            <div style="margin-bottom: 12px; color: var(--accent);">
+              Cible LinkedIn : <code>${cold.target_role || 'ADMIN'}</code><br>
+              ${cold.subject ? `Objet : <em>${cold.subject}</em>` : ''}
+            </div>
+            <div class="code-box" id="modal-cold-dm">${cold.dm_text || ''}</div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="copyColdFromModal()">COPIER LE MESSAGE</button>
+            </div>
+          `;
+        } else {
+          document.getElementById('tab-cold').innerHTML = `<p style="color: var(--text-muted);">INSUFFICIENT DATA.</p>`;
+        }
+
+        document.getElementById('tab-cover').innerHTML = `
+          <div style="border: 1px dashed var(--border); padding: 24px; text-align: center;">
+            <div style="color: var(--accent); margin-bottom: 16px;">GÉNÉRER LA LETTRE DE MOTIVATION (PDF)</div>
+            <button class="btn btn-primary" onclick="quickGenerateCoverLetter('${j.id}')">CRÉER LE PDF</button>
+            <div id="cover-letter-status" style="margin-top: 14px; font-size: 11px;"></div>
+          </div>
+        `;
+
+        switchModalTab('pitch');
+        document.getElementById('detail-modal').style.display = 'flex';
+      } catch (e) { console.error('Modal error:', e); }
+    }
+
+    async function switchModalTab(tabKey, el) {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+      else document.querySelector(`.modal-tab[onclick*="${tabKey}"]`)?.classList.add('active');
+      document.getElementById(`tab-${tabKey}`)?.classList.add('active');
+      
+      if (tabKey === 'pow') {
+        setTimeout(async () => {
+          try {
+            const el = document.querySelector('#tab-pow .mermaid');
+            if (el && !el.dataset.rendered) {
+              el.dataset.rendered = "true";
+              const { svg } = await mermaid.render('mermaid-svg-' + Date.now(), el.textContent);
+              el.parentElement.innerHTML = svg;
+            }
+          } catch (e) { console.error('Mermaid error:', e); }
+        }, 50);
+      }
+    }
+
+    async function quickGenerateCoverLetter(jobId) {
+      showToast('COMPILING DOCUMENT...');
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/generate-cover-letter`, { method: 'POST' });
+        const d = await res.json();
+        if (d.success) showToast(`FILE SECURED: ${d.filename}`);
+        else showToast('ERR: COMPILATION FAILED');
+      } catch (e) { showToast('ERR: FATAL EXCEPTION'); }
+    }
+
+    async function triggerAutoFill(jobId) {
+      showToast('INJECTING SCRIPT...');
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/auto-fill`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message);
+      } catch (e) { showToast('ERR: INJECTION FAILED'); }
+    }
+
+    async function copyPitchAction(jobId) {
+      try {
+        await fetch(`/api/jobs/${jobId}/copy-pitch`, { method: 'POST' });
+        showToast('COPIED TO CLIPBOARD');
+      } catch (e) { showToast('ERR: COPY FAILED'); }
+    }
+    function copyColdFromModal() {
+      const el = document.getElementById('modal-cold-dm');
+      if (el) {
+        navigator.clipboard.writeText(el.textContent);
+        showToast('PAYLOAD COPIED');
+      }
+    }
+    async function updateJobStatus(jobId, status) {
+      try {
+        await fetch(`/api/jobs/${jobId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+        showToast(`STATUS UPDATED: ${status}`);
+        loadStats();
+      } catch (e) {}
+    }
+    async function triggerHunterRun() {
+      if (window.triggerSonarRadarWave) window.triggerSonarRadarWave();
+      try {
+        const res = await fetch('/api/trigger-run', { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message);
+        loadStats();
+      } catch (e) { showToast('ERR: SCAN TRIGGER FAILED'); }
+    }
+    function setFilter(f, el) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+      loadJobs();
+    }
+    function handleSearch() { currentSearch = document.getElementById('search-box').value; loadJobs(); }
+    
+    function closeModal(e) {
+      if (!e || e.target.id === 'detail-modal' || e.target.tagName === 'BUTTON') {
+        document.getElementById('detail-modal').style.display = 'none';
+      }
+    }
+    async function openLogsModal() {
+      document.getElementById('logs-modal').style.display = 'flex';
+      refreshLogs();
+    }
+    async function refreshLogs() {
+      try {
+        const res = await fetch('/api/logs?lines=60');
+        const d = await res.json();
+        document.getElementById('logs-content').textContent = d.lines.join('\n');
+      } catch (e) { document.getElementById('logs-content').textContent = 'ERR: LOGS UNAVAILABLE'; }
+    }
+    function closeLogsModal(e) {
+      if (!e || e.target.id === 'logs-modal' || e.target.tagName === 'BUTTON') {
+        document.getElementById('logs-modal').style.display = 'none';
+      }
+    }
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3000);
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeModal(); closeLogsModal(); }
+      else if (e.key === '/' && document.activeElement !== document.getElementById('search-box')) {
+        e.preventDefault(); document.getElementById('search-box').focus();
+      }
+    });
+
+    loadStats(); loadJobs(); setInterval(loadStats, 5000);
+  </script>
+</body>
+</html>

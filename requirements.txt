@@ -1,0 +1,19 @@
+# Core Web & API Framework
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# Scraper & Stealth Engine
+scrapling>=0.4.15
+curl-cffi>=0.16.3
+patchright>=1.63.0
+playwright>=1.49.0
+browserforge>=1.2.4
+markdownify>=1.2.3
+
+# Utilities & Parsing
+pydantic>=2.10.0
+psutil>=6.1.0
+requests>=2.32.0
+python-dotenv>=1.0.1
+lxml>=5.3.0
+beautifulsoup4>=4.12.3
