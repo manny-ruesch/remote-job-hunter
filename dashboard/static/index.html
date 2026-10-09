@@ -12,34 +12,117 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
   <style>
-    :root {
+    
+    :root, [data-theme="dark"] {
       --bg: #030303;
-      --card: #0a0a0a;
-      --border: rgba(255, 255, 255, 0.15);
-      --border-hover: rgba(255, 255, 255, 0.8);
-      --text: #d4d4d4;
-      --text-muted: #666666;
-      --accent: #ffffff;
-      --accent-glow: 0 0 15px rgba(255, 255, 255, 0.6);
+      --bg-radial: radial-gradient(circle at 50% 25%, #080808 0%, #020202 85%);
+      --card: #0d0d0d;
+      --card-hover: #141414;
+      --border: rgba(255, 255, 255, 0.16);
+      --border-hover: rgba(255, 255, 255, 0.85);
+      --text: #EDEDED;
+      --text-muted: #9E9E9E;
+      --accent: #FFFFFF;
+      --accent-glow: 0 0 16px rgba(255, 255, 255, 0.5);
       --font-mono: 'JetBrains Mono', monospace;
       
-      --color-hot: #ff4444;
-      --color-hot-bg: rgba(255, 68, 68, 0.1);
-      --color-pt: #a020f0;
-      --color-pt-bg: rgba(160, 32, 240, 0.1);
+      --color-hot: #FF3B30;
+      --color-hot-bg: rgba(255, 59, 48, 0.12);
+      --color-pt: #A855F7;
+      --color-pt-bg: rgba(168, 85, 247, 0.12);
+      --brand-red: #E53935;
+      
+      --web-spoke: rgba(255, 255, 255, 0.045);
+      --web-ring: rgba(255, 255, 255, 0.055);
+      --silk-thread: rgba(255, 255, 255, 0.45);
+      --silk-glow: rgba(255, 255, 255, 0.7);
+      --radar-stroke: rgba(255, 255, 255, 0.85);
+      --header-bg: rgba(0, 0, 0, 0.65);
+      --dropzone-bg: rgba(0, 0, 0, 0.4);
+      --code-box-bg: #000000;
+      --chip-bg: rgba(12, 12, 12, 0.7);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [data-theme="light"] {
+      --bg: #F8F6F2;
+      --bg-radial: radial-gradient(circle at 50% 25%, #FFFFFF 0%, #F5F2EC 85%);
+      --card: #FFFFFF;
+      --card-hover: #FCFAF7;
+      --border: rgba(20, 18, 16, 0.14);
+      --border-hover: #C8102E;
+      --text: #141210;
+      --text-muted: #6B6560;
+      --accent: #C8102E;
+      --accent-glow: 0 0 16px rgba(200, 16, 46, 0.25);
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --color-hot: #C8102E;
+      --color-hot-bg: rgba(200, 16, 46, 0.08);
+      --color-pt: #4F46E5;
+      --color-pt-bg: rgba(79, 70, 229, 0.08);
+      --brand-red: #C8102E;
+      
+      --web-spoke: rgba(200, 16, 46, 0.06);
+      --web-ring: rgba(20, 18, 16, 0.06);
+      --silk-thread: rgba(200, 16, 46, 0.65);
+      --silk-glow: rgba(200, 16, 46, 0.5);
+      --radar-stroke: rgba(200, 16, 46, 0.85);
+      --header-bg: rgba(248, 246, 242, 0.88);
+      --dropzone-bg: rgba(255, 255, 255, 0.85);
+      --code-box-bg: #141210;
+      --chip-bg: #FFFFFF;
+    }
+
+    [data-theme="light"] .btn-primary {
+      color: #FFFFFF !important;
+    }
+
+    [data-theme="light"] .job-card {
+      background: #FFFFFF !important;
+      box-shadow: 0 4px 14px rgba(20, 18, 16, 0.03);
+    }
+    
+    [data-theme="light"] .kpi-card {
+      background: #FFFFFF !important;
+    }
+
+    [data-theme="light"] .brand-avatar {
+      background: #FFFFFF !important;
+    }
+
+    [data-theme="light"] .modal-card {
+      background: #FFFFFF !important;
+      color: #141210 !important;
+    }
+
+    [data-theme="light"] .code-box {
+      background: #141210 !important;
+      color: #F8F6F2 !important;
+    }
+
+    [data-theme="light"] .search-input {
+      background: #FFFFFF !important;
+      color: #141210 !important;
+    }
+
+    /* View Transitions Circular Ripple */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+
+    * { box-sizing: * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
       background-color: var(--bg);
+      background: var(--bg-radial);
       color: var(--text);
       font-family: var(--font-mono);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
-      background: radial-gradient(circle at 50% 25%, #080808 0%, #020202 85%);
       overflow-x: hidden;
     }
 
@@ -49,7 +132,7 @@
 
     /* Header */
     header {
-      background: rgba(0,0,0,0.6);
+      background: var(--header-bg);
       border-bottom: 1px solid var(--border);
       padding: 16px 36px;
       display: grid;
@@ -200,6 +283,33 @@
       box-shadow: 0 0 18px rgba(255, 255, 255, 0.25) !important;
     }
 
+    
+    /* Mobile Responsive Breakpoints */
+    @media (max-width: 900px) {
+      header {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px 18px;
+        text-align: center;
+      }
+      .header-left, .header-center, .header-actions {
+        justify-content: center;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .jobs-grid {
+        grid-template-columns: 1fr;
+      }
+      .controls-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-input {
+        width: 100% !important;
+      }
+    }
+
     /* Container */
     .container {
       max-width: 1400px;
@@ -214,7 +324,7 @@
     /* Spider Dropzone */
     .dropzone-container {
       border: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--dropzone-bg);
       backdrop-filter: blur(4px);
       padding: 40px 20px;
       text-align: center;
@@ -465,13 +575,14 @@
     .action-group { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
     .status-select {
       padding: 4px 8px;
-      background: #000;
+      background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
       font-family: var(--font-mono);
       font-size: 11px;
       outline: none;
       height: 26px; /* Matches buttons */
+      cursor: pointer;
     }
 
     /* Modals */
@@ -541,6 +652,7 @@
     </div>
     
     <div class="header-actions">
+      <button class="btn" id="theme-toggle" onclick="toggleTheme()" style="min-width: 100px;">[ ☀️ LIGHT ]</button>
       <div id="status-pill" class="status-badge">
         <span class="dot"></span>
         <span id="status-text">VEILLE ACTIVE</span>
@@ -584,6 +696,10 @@
         <div class="kpi-label">CANDIDATURES</div>
         <div class="kpi-val" id="kpi-applied">-</div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">ENTRETIENS</div>
+        <div class="kpi-val" id="kpi-interview" style="color: var(--brand-red);">-</div>
+      </div>
     </div>
 
     <!-- Controls -->
@@ -593,6 +709,8 @@
         <div class="filter-chip" onclick="setFilter('part_time', this)">Part-Time <span class="chip-count" id="count-pt">0</span></div>
         <div class="filter-chip" onclick="setFilter('all', this)">Toutes les Offres <span class="chip-count" id="count-all">0</span></div>
         <div class="filter-chip" onclick="setFilter('applied', this)">Postulées <span class="chip-count" id="count-applied">0</span></div>
+        <div class="filter-chip" onclick="setFilter('interview', this)">🎯 Entretiens <span class="chip-count" id="count-interview">0</span></div>
+        <div class="filter-chip" onclick="setFilter('archived', this)">📦 Archivées <span class="chip-count" id="count-archived">0</span></div>
       </div>
 
       <input type="text" class="search-input" id="search-box" placeholder="Rechercher une entreprise, un rôle... (Touche '/')" oninput="handleSearch()">
@@ -813,7 +931,7 @@
         for (let r = 0; r < RINGS; r++) {
           ctx.lineTo(nodes[s][r].x, nodes[s][r].y);
         }
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+        ctx.strokeStyle = (document.documentElement.getAttribute('data-theme') === 'light') ? 'rgba(200, 16, 46, 0.07)' : 'rgba(255, 255, 255, 0.045)';
         ctx.stroke();
       }
 
@@ -832,7 +950,8 @@
           ctx.quadraticCurveTo(ctrlX, ctrlY, next.x, next.y);
         }
         const ringAlpha = 0.035 + (r / RINGS) * 0.05;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        ctx.strokeStyle = isLight ? `rgba(20, 18, 16, ${ringAlpha * 0.9})` : `rgba(255, 255, 255, ${ringAlpha})`;
         ctx.stroke();
       }
 
@@ -856,7 +975,7 @@
           ctx.beginPath();
           ctx.moveTo(startX, startY);
           ctx.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+          ctx.strokeStyle = (document.documentElement.getAttribute('data-theme') === 'light') ? 'rgba(200, 16, 46, 0.75)' : 'rgba(255, 255, 255, 0.45)';
           ctx.lineWidth = 1.5;
           ctx.shadowBlur = 8;
           ctx.shadowColor = 'rgba(255, 255, 255, 0.7)';
@@ -1015,20 +1134,77 @@
       });
     }
 
+    
+    // --- Theme & Counter Extensions ---
+    function initTheme() {
+      const saved = localStorage.getItem('rh_theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', saved);
+      const btn = document.getElementById('theme-toggle');
+      if (btn) btn.textContent = saved === 'dark' ? '[ ☀️ LIGHT ]' : '[ 🌙 DARK ]';
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+
+      function apply() {
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('rh_theme', next);
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = next === 'dark' ? '[ ☀️ LIGHT ]' : '[ 🌙 DARK ]';
+        if (window.triggerSonarRadarWave) window.triggerSonarRadarWave();
+      }
+
+      if (document.startViewTransition) {
+        document.startViewTransition(() => apply());
+      } else {
+        apply();
+      }
+    }
+
+    function animateCounter(el, targetVal, duration = 650) {
+      if (!el) return;
+      const target = parseInt(targetVal, 10);
+      if (isNaN(target)) {
+        el.textContent = targetVal || '0';
+        return;
+      }
+      const current = parseInt(el.textContent, 10) || 0;
+      if (current === target) return;
+
+      const startTime = performance.now();
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 4);
+        const val = Math.round(current + (target - current) * ease);
+        el.textContent = val;
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          el.textContent = target;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
     // --- App Logic ---
     async function loadStats() {
       try {
         const res = await fetch('/api/stats');
         const d = await res.json();
-        document.getElementById('kpi-total').textContent = d.total_scouted || 0;
-        document.getElementById('kpi-hot').textContent = d.hot_qualified || 0;
-        document.getElementById('kpi-applied').textContent = d.applied_count || 0;
-        document.getElementById('kpi-parttime').textContent = d.part_time_count || 0;
+        animateCounter(document.getElementById('kpi-total'), d.total_scouted || 0);
+        animateCounter(document.getElementById('kpi-hot'), d.hot_qualified || 0);
+        animateCounter(document.getElementById('kpi-applied'), d.applied_count || 0);
+        animateCounter(document.getElementById('kpi-parttime'), d.part_time_count || 0);
+        animateCounter(document.getElementById('kpi-interview'), d.interview_count || 0);
 
         document.getElementById('count-hot').textContent = d.hot_qualified || 0;
         document.getElementById('count-all').textContent = d.total_scouted || 0;
         document.getElementById('count-applied').textContent = d.applied_count || 0;
         document.getElementById('count-pt').textContent = d.part_time_count || 0;
+        if (document.getElementById('count-interview')) document.getElementById('count-interview').textContent = d.interview_count || 0;
+        if (document.getElementById('count-archived')) document.getElementById('count-archived').textContent = d.archived_count || 0;
 
         const pill = document.getElementById('status-pill');
         const text = document.getElementById('status-text');
@@ -1296,7 +1472,7 @@
       }
     });
 
-    loadStats(); loadJobs(); setInterval(loadStats, 5000);
+    initTheme(); loadStats(); loadJobs(); setInterval(loadStats, 5000);
   </script>
 </body>
 </html>

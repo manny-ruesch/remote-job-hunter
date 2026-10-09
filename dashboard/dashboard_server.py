@@ -66,13 +66,15 @@ async def get_stats():
     stats = db.get_pipeline_stats()
     is_running, pid = is_hunter_running()
     
-    # Count applied, interviews, and part-time
+    # Count applied, interviews, part-time, and archived
     conn = db.get_conn()
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM jobs WHERE status = 'applied'")
     applied_count = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM jobs WHERE status = 'interview'")
     interview_count = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM jobs WHERE status = 'archived'")
+    archived_count = c.fetchone()[0]
     c.execute("SELECT COUNT(*) FROM jobs WHERE job_type IN ('part_time', 'contract')")
     part_time_count = c.fetchone()[0]
     conn.close()
@@ -82,6 +84,7 @@ async def get_stats():
         "hot_qualified": stats["hot_jobs"],
         "applied_count": applied_count,
         "interview_count": interview_count,
+        "archived_count": archived_count,
         "part_time_count": part_time_count,
         "by_status": stats["by_status"],
         "by_source": stats["by_source"],
