@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Any
 
 import psutil
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,8 @@ from fastapi.staticfiles import StaticFiles
 HUNTER_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(HUNTER_DIR))
 
+import cv_profiler
+
 import db
 import config
 
@@ -23,9 +25,12 @@ app = FastAPI(title="Remote Job Hunter — Command Center")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:5070",
+        "http://localhost:5070",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -217,6 +222,36 @@ async def generate_cover_letter(job_id: str):
 def _run_hunter_worker():
     bat_path = HUNTER_DIR / "run_hunter.bat"
     subprocess.run(["cmd.exe", "/c", str(bat_path)], cwd=str(HUNTER_DIR))
+
+@app.get("/api/candidate-profile")
+async def get_candidate_profile():
+    return cv_profiler.get_active_profile()
+
+@app.post("/api/upload-cv")
+async def upload_cv(file: UploadFile = File(...)):
+    fname = file.filename or ""
+    if not fname.lower().endswith(".pdf"):
+        raise HTTPException(400, "Seuls les fichiers PDF sont acceptés.")
+        
+    cv_dest = HUNTER_DIR / "uploaded_cv.pdf"
+    with open(cv_dest, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        
+    text = cv_profiler.extract_pdf_text(cv_dest)
+    if not text:
+        raise HTTPException(400, "Impossible d'extraire le texte du PDF.")
+        
+    profile = cv_profiler.profile_cv_with_gemini(text)
+    if not profile:
+        raise HTTPException(500, "Erreur lors du profilage IA par Gemini.")
+        
+    return {
+        "success": True,
+        "filename": file.filename,
+        "profile": profile,
+        "message": f"Profil analysé : {profile.get('target_role', 'Candidat')} ({profile.get('domain', '')})"
+    }
 
 @app.post("/api/trigger-run")
 async def trigger_run(background_tasks: BackgroundTasks):

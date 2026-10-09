@@ -53,8 +53,16 @@ def open_job(job_id_or_url: str):
         except Exception:
             pass
 
+    import webbrowser
+    from urllib.parse import urlparse
+
     print("\n🚀 Opening application in your browser...")
-    subprocess.run(["cmd.exe", "/c", "start", "", url], shell=True)
+    if url:
+        parsed = urlparse(url)
+        if parsed.scheme in ("http", "https"):
+            webbrowser.open(url)
+        else:
+            print(f"⚠️ Invalid URL scheme: {url}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
