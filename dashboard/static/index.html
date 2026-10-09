@@ -920,6 +920,7 @@
     // Radar Shockwave with Pre-Cached Card Rectangles (Zero Layout Reflow at 60 FPS)
     window.activeShockwaves = [];
     window.triggerSonarRadarWave = function(originX, originY) {
+      if (typeof spiders !== "undefined") spiders.forEach(sp => { sp.panic = 1.6; sp.pause = 0; });
       const logoPet = document.getElementById('logo-pet');
       let ox = originX;
       let oy = originY;
@@ -968,6 +969,166 @@
         }
       }
     };
+
+    
+    // ========================================================
+    // ARAIGNÉES VIVANTES EN PIXEL ART QUI ARPENtENT LA TOILE
+    // ========================================================
+    const SPIDER_COUNT = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 0
+      : (window.innerWidth < 700 ? 1 : 3);
+    const spiders = [];
+    let spiderLastT = 0;
+
+    function webNeighbors(s, r, prev) {
+      const all = [
+        [s, r + 1], [s, r - 1],
+        [(s + 1) % SPOKES, r], [(s - 1 + SPOKES) % SPOKES, r],
+      ].filter(([, rr]) => rr >= 0 && rr < RINGS);
+      const notPrev = all.filter(([ss, rr]) => !(prev && ss === prev[0] && rr === prev[1]));
+      const m = 80;
+      const visible = notPrev.filter(([ss, rr]) => {
+        const n = nodes[ss][rr];
+        return n.restX > -m && n.restX < width + m && n.restY > -m && n.restY < height + m;
+      });
+      return visible.length ? visible : (notPrev.length ? notPrev : all);
+    }
+
+    function newSpider() {
+      const s = Math.floor(Math.random() * SPOKES);
+      const r = 1 + Math.floor(Math.random() * (RINGS - 4));
+      return {
+        from: [s, r], to: [s, r], prev: null, p: 1,
+        speed: 26 + Math.random() * 20,
+        size: 4 + Math.random() * 2,
+        heading: Math.random() * Math.PI * 2,
+        phase: Math.random() * Math.PI * 2,
+        pause: 0, panic: 0,
+      };
+    }
+
+    function edgePoint(sp) {
+      const A = nodes[sp.from[0]][sp.from[1]];
+      const B = nodes[sp.to[0]][sp.to[1]];
+      const t = sp.p;
+      const len = Math.hypot(B.x - A.x, B.y - A.y);
+      if (sp.from[1] === sp.to[1] && sp.from[0] !== sp.to[0]) {
+        const cx = origin.x + ((A.x + B.x) / 2 - origin.x) * 0.92;
+        const cy = origin.y + ((A.y + B.y) / 2 - origin.y) * 0.92;
+        const u = 1 - t;
+        return {
+          x: u * u * A.x + 2 * u * t * cx + t * t * B.x,
+          y: u * u * A.y + 2 * u * t * cy + t * t * B.y,
+          len,
+        };
+      }
+      return { x: A.x + (B.x - A.x) * t, y: A.y + (B.y - A.y) * t, len };
+    }
+
+    function drawSpider(ctx, x, y, heading, size, phase, moving, isLight) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(heading);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(0.8, size * 0.17);
+      
+      const spiderRgb = isLight ? '26, 20, 21' : '230, 230, 230';
+      const spiderEyes = isLight ? 'rgba(200, 16, 46, 0.95)' : 'rgba(255, 59, 48, 0.95)';
+
+      ctx.strokeStyle = `rgba(${spiderRgb}, 0.8)`;
+      ctx.fillStyle = `rgba(${spiderRgb}, 0.92)`;
+
+      // 8 pattes en vague
+      for (let i = 0; i < 4; i++) {
+        for (const side of [-1, 1]) {
+          const legPhase = phase + i * 1.5 + (side > 0 ? Math.PI : 0);
+          const swing = Math.sin(legPhase) * (moving ? 0.26 : 0.06);
+          const ang = side * (Math.PI / 2 + (i - 1.5) * 0.55 - swing);
+          const ox = size * (0.65 - i * 0.2);
+          const kx = ox + Math.cos(ang) * size;
+          const ky = Math.sin(ang) * size;
+          const bend = (i < 2 ? -1 : 1) * side * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(ox, 0);
+          ctx.lineTo(kx, ky);
+          ctx.lineTo(kx + Math.cos(ang + bend) * size * 1.2, ky + Math.sin(ang + bend) * size * 1.2);
+          ctx.stroke();
+        }
+      }
+
+      // Abdomen et céphalothorax
+      ctx.beginPath();
+      ctx.ellipse(-size * 0.75, 0, size * 0.95, size * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(size * 0.3, 0, size * 0.55, size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Yeux rouges
+      ctx.fillStyle = spiderEyes;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(size * 0.62, side * size * 0.17, Math.max(0.7, size * 0.1), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function updateAndDrawSpiders(time, ctx) {
+      if (SPIDER_COUNT === 0) return;
+      const now = time || 0;
+      const dt = Math.min(Math.max((now - spiderLastT) / 1000, 0), 0.05);
+      spiderLastT = now;
+      while (spiders.length < SPIDER_COUNT) spiders.push(newSpider());
+
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+      for (const sp of spiders) {
+        let pt = edgePoint(sp);
+        const dMouse = (n) => Math.hypot(n.x - mouse.x, n.y - mouse.y);
+        const nearMouse = Math.hypot(pt.x - mouse.x, pt.y - mouse.y) < 130;
+        if (sp.panic > 0) sp.panic -= dt;
+        if (nearMouse) {
+          sp.pause = 0;
+          const a0 = nodes[sp.from[0]][sp.from[1]], b0 = nodes[sp.to[0]][sp.to[1]];
+          if (dMouse(b0) < dMouse(a0)) {
+            [sp.from, sp.to] = [sp.to, sp.from];
+            sp.p = 1 - sp.p;
+          }
+        }
+        const boost = (nearMouse || sp.panic > 0) ? 3.2 : 1;
+
+        if (sp.pause > 0) sp.pause -= dt;
+        else sp.p += (sp.speed * boost * dt) / Math.max(pt.len, 1);
+
+        if (sp.p >= 1) {
+          sp.prev = sp.from;
+          sp.from = sp.to;
+          const options = webNeighbors(sp.from[0], sp.from[1], sp.prev);
+          const here = nodes[sp.from[0]][sp.from[1]];
+          if (dMouse(here) < 260) {
+            options.sort((a, b) => dMouse(nodes[b[0]][b[1]]) - dMouse(nodes[a[0]][a[1]]));
+            sp.to = options[0];
+          } else {
+            sp.to = options[Math.floor(Math.random() * options.length)];
+          }
+          sp.p = 0;
+          if (Math.random() < 0.25) sp.pause = 0.4 + Math.random() * 1.6;
+        }
+
+        const A = nodes[sp.from[0]][sp.from[1]];
+        const B = nodes[sp.to[0]][sp.to[1]];
+        const target = Math.atan2(B.y - A.y, B.x - A.x);
+        const diff = Math.atan2(Math.sin(target - sp.heading), Math.cos(target - sp.heading));
+        sp.heading += diff * Math.min(1, dt * 8);
+
+        const moving = sp.pause <= 0;
+        sp.phase += dt * (moving ? 16 * boost : 3);
+        pt = edgePoint(sp);
+        drawSpider(ctx, pt.x, pt.y, sp.heading, sp.size, sp.phase, moving, isLight);
+      }
+    }
 
     const SPRING = 0.065;
     const DAMPING = 0.88;
@@ -1078,6 +1239,9 @@
         ctxBg.strokeStyle = isLight ? `rgba(20, 18, 16, ${ringAlpha})` : `rgba(${webRgb}, ${ringAlpha})`;
         ctxBg.stroke();
       }
+
+      // 4b. Draw Living Spiders on Foreground Canvas
+      updateAndDrawSpiders(time, ctxFg);
 
       // 5. Draw Silk Thread on Foreground Canvas (Over Cards)
       if (hoveredCard) {
