@@ -20,6 +20,7 @@ venv/
 # Personal search and generation outputs
 HOT_OPPORTUNITIES.md
 candidate_profile.json
+profile.yaml
 uploaded_cv.pdf
 cover_letter_*.html
 *.pdf

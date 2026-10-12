@@ -1,0 +1,93 @@
+<!-- Composant « Mode manuel » : à coller dans index.html. Données affichées UNIQUEMENT via textContent. -->
+<section id="mp" class="mp" aria-labelledby="mp-title">
+  <h3 id="mp-title">Mode manuel — utilisez votre abonnement ChatGPT, Claude ou Gemini</h3>
+  <p class="mp-hint">1. Préparez les lots · 2. Copiez un prompt dans le chat de votre choix · 3. Collez sa réponse ici.</p>
+  <button id="mp-generate" type="button">Exporter le batch pour mon LLM</button>
+  <span id="mp-status" role="status"></span>
+  <div id="mp-batches"></div>
+  <div id="mp-import" hidden>
+    <label for="mp-paste" id="mp-import-title"></label>
+    <textarea id="mp-paste" rows="8" spellcheck="false" placeholder="Collez ici la réponse du chat (le bloc JSON suffit)"></textarea>
+    <button id="mp-submit" type="button">Importer la réponse</button>
+    <div id="mp-report" role="status"></div>
+  </div>
+  <textarea id="mp-fallback" rows="6" readonly hidden aria-label="Prompt à copier à la main"></textarea>
+</section>
+<style>
+  .mp { border: 1px solid var(--border, #ccc); border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .mp textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; }
+  .mp .mp-card { border-top: 1px solid var(--border, #ccc); padding: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .mp .mp-card.is-followup { border-left: 3px solid var(--accent, #c8102e); padding-left: 8px; }
+  .mp [role=status] { margin-left: 8px; }
+  @media (prefers-reduced-motion: no-preference) { .mp .mp-card { transition: background .2s; } }
+</style>
+<script>
+(function () {
+  'use strict';
+  var CHATS = [['ChatGPT', 'https://chatgpt.com/'], ['Claude', 'https://claude.ai/new'], ['Gemini', 'https://gemini.google.com/app']];
+  var $ = function (id) { return document.getElementById(id); };
+  var tokenMeta = document.querySelector('meta[name="rjh-token"]');
+  var token = tokenMeta ? tokenMeta.getAttribute('content') : '';
+  var current = null;                                   // ticket dans lequel on va coller la réponse
+
+  function api(path, method, body) {
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch('/api/manual' + path, { method: method || 'GET', headers: headers, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || ('HTTP ' + r.status)); return j; }); });
+  }
+  function el(tag, text, cls) { var n = document.createElement(tag); if (text) n.textContent = text; if (cls) n.className = cls; return n; }
+
+  function copy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    var fb = $('mp-fallback'); fb.hidden = false; fb.value = text; fb.select();         // contexte non sécurisé : copie manuelle
+    return Promise.reject(new Error('copie automatique indisponible : sélectionnez le texte ci-dessous'));
+  }
+
+  function render(tickets) {
+    var box = $('mp-batches'); box.replaceChildren();
+    tickets.forEach(function (t, i) {
+      var card = el('div', '', 'mp-card' + (t.parent_id ? ' is-followup' : ''));
+      card.appendChild(el('strong', (t.parent_id ? 'Relance · ' : 'Lot ' + (i + 1) + ' · ') + t.n_jobs + ' offre(s) · ≈ ' + t.est_tokens + ' tokens'));
+      var b = el('button', 'Copier le prompt'); b.type = 'button';
+      b.addEventListener('click', function () {
+        api('/tickets/' + t.id).then(function (d) { return copy(d.prompt); })
+          .then(function () { $('mp-status').textContent = 'Prompt copié. Collez-le dans le chat de votre choix.'; })
+          .catch(function (e) { $('mp-status').textContent = e.message; });
+      });
+      card.appendChild(b);
+      CHATS.forEach(function (c) { var a = el('a', c[0]); a.href = c[1]; a.target = '_blank'; a.rel = 'noopener noreferrer'; card.appendChild(a); });
+      var p = el('button', 'Coller la réponse'); p.type = 'button';
+      p.addEventListener('click', function () {
+        current = t; $('mp-import').hidden = false; $('mp-import-title').textContent = 'Réponse du chat pour le lot de ' + t.n_jobs + ' offre(s)';
+        $('mp-report').textContent = ''; $('mp-paste').value = ''; $('mp-paste').focus();
+      });
+      card.appendChild(p);
+      box.appendChild(card);
+    });
+  }
+  function refresh() { return api('/tickets').then(function (r) { render(r.tickets); return r.tickets; }); }
+
+  $('mp-generate').addEventListener('click', function () {
+    $('mp-status').textContent = 'Préparation…';
+    api('/batches', 'POST', { kind: 'triage', limit: 30 })
+      .then(function (r) { $('mp-status').textContent = r.tickets.length + ' lot(s) prêt(s).'; return refresh(); })
+      .catch(function (e) { $('mp-status').textContent = e.message; });
+  });
+
+  $('mp-submit').addEventListener('click', function () {
+    if (!current) return;
+    var text = $('mp-paste').value;
+    if (!text.trim()) { $('mp-report').textContent = 'Collez d’abord la réponse.'; return; }
+    api('/tickets/' + current.id + '/import', 'POST', { text: text }).then(function (r) {
+      var rep = $('mp-report'); rep.replaceChildren();
+      rep.appendChild(el('div', r.accepted + ' offre(s) lue(s)' + (r.missing ? ', ' + r.missing + ' manquante(s)' : ' — lot complet') + '.'));
+      (r.warnings || []).concat(r.invalid || []).forEach(function (w) { rep.appendChild(el('div', '⚠ ' + w)); });
+      if (r.followup_ticket) rep.appendChild(el('div', 'Un lot de relance a été créé pour les offres manquantes (ci-dessus).'));
+      current = null; $('mp-paste').value = '';          // le ticket est clos : on ne peut plus coller dessus
+      return refresh();
+    }).catch(function (e) { $('mp-report').textContent = e.message; });
+  });
+  refresh().catch(function () {});
+})();
+</script>

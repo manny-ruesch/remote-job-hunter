@@ -41,8 +41,19 @@ def init_db():
         c.execute("ALTER TABLE jobs ADD COLUMN cold_outreach TEXT")
     if "job_type" not in cols:
         c.execute("ALTER TABLE jobs ADD COLUMN job_type TEXT DEFAULT 'full_time'")
+    if "analysis_status" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN analysis_status TEXT DEFAULT 'ok'")
+    if "rationale" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN rationale TEXT")
+    if "gate" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN gate TEXT")
+    if "profile_fp" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN profile_fp TEXT")
+    if "dedupe_key" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN dedupe_key TEXT")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status_fit ON jobs(status, fit_score);")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_type_fit ON jobs(job_type, fit_score);")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_analysis_status ON jobs(analysis_status);")
     conn.commit()
     conn.close()
 
