@@ -1,0 +1,87 @@
+# ============================================================================
+#  profile.yaml : TOUT ce qui rend la recherche personnelle vit ici, pas dans le code.
+#  Une clé inconnue ou une faute de frappe est refusée avec une suggestion.
+#  Aucune clé d'API ici : on n'écrit que le NOM d'une variable d'environnement.
+# ============================================================================
+version: 1
+
+identity:                         # sert à l'auto-remplissage et aux messages (jamais envoyé au LLM)
+  name: "Camille Dupont"
+  email: "camille@example.org"
+  phone: ""
+  city: "Pau"
+  links: { linkedin: "https://linkedin.com/in/camille-dupont", github: "" }
+  resume_path: "~/Documents/cv.pdf"
+
+search:
+  titles:
+    primary:  ["automation engineer", "no-code developer", "workflow automation"]   # poids fort
+    related:  ["integration specialist", "revops", "solutions engineer"]           # poids moyen
+    exclude:  ["intern", "stagiaire"]                                              # titre écarté d'office
+  keywords:
+    must_any: []                                   # si renseigné : au moins un doit apparaître (sinon -30)
+    boost:    { n8n: 10, zapier: 6, python: 4, "rest api": 5, webhook: 5 }         # terme: points
+    penalize: { "cold calling": 10, "quota carrying": 8 }
+  seniority:
+    level: mid                                     # intern | junior | mid | senior | lead | any
+    years_experience: 3
+    max_years_required: 5                          # une offre qui en exige plus : -40 (gate « years_required »)
+    avoid_title_terms: ["head of", "vp", "principal", "staff"]                     # titre écarté d'office
+  contract:
+    types: [full_time, contract, freelance]        # vide = tous
+  work_mode:
+    remote: required                               # required | preferred | any
+    cities: []                                     # utile si remote != required
+    radius_km: null
+    hybrid_ok: false
+  location:
+    eligible_regions: [FR, EU]                     # où vous pouvez travailler (FR => FR+EU compris)
+    excluded_regions: [US, CA, IN]                 # offres dont TOUTES les zones sont ici : écartées
+    countries: [fr]                                # pays interrogés par les sources par mots-clés (Adzuna…)
+  languages:
+    spoken: { fr: native, en: C1 }
+    reject_if_required: [de]                       # « native German » exigé : -35
+  compensation:
+    currency: EUR
+    min_annual: 40000
+    unknown_ok: true                               # salaire non communiqué : on ne pénalise pas
+  companies:
+    whitelist: []
+    blacklist: ["acme staffing"]                   # écartées d'office
+
+scoring:
+  hot_threshold: 7.5                               # score LLM (0-10) -> « HOT »
+  heuristic_min: 15                                # score pré-tri (0-100) minimal pour aller au LLM
+  gates:                                           # règles AVANCÉES en plus de celles déduites ci-dessus
+    - id: onsite_germany                           #   vocabulaire fermé : title_matches, description_matches,
+      when: { description_matches: ["vor ort"] }   #   years_required_gte, location_ineligible, company_blacklisted,
+      action: reject                               #   language_required_in, salary_below, remote
+    - id: heavy_travel
+      when: { description_matches: ["travel up to 50%", "75% travel"] }
+      action: penalize
+      penalty: 20
+
+sources:
+  enabled: [remotive, adzuna, greenhouse]
+  boards:                                          # liste de suivi : entreprises dont vous voulez voir TOUTES les offres
+    greenhouse: [stripe, airtable]
+  options:
+    adzuna:   { countries: [fr], max_results: 150, max_age_days: 14 }   # clés : ADZUNA_APP_ID / ADZUNA_APP_KEY
+    remotive: { max_titles: 3 }
+
+llm:
+  provider: manual                                 # manual | gemini | openai | ollama | anthropic | openrouter | groq | ...
+  model: ""                                        # ex. le modèle de votre fournisseur ; `rjh doctor` liste ceux disponibles
+  base_url: ""                                     # seulement pour un serveur compatible OpenAI hors liste
+  api_key_env: ""                                  # ex. GOOGLE_API_KEY  (le NOM de la variable, pas la clé)
+  temperature: 0.2
+  max_jobs_per_run: 15
+  language: fr                                     # langue des explications et des textes générés
+
+candidate:
+  summary: >
+    Spécialiste de l'automatisation des processus commerciaux, trois ans d'expérience
+    sur des intégrations CRM et des workflows no-code en production.
+  facts:                                           # SEULES preuves que le LLM a le droit de citer dans un pitch
+    - "A conçu 30 workflows n8n en production pour une agence immobilière"
+    - "A réduit le temps de qualification des leads de 4 h à 20 min"

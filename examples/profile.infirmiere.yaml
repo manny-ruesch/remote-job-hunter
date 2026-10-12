@@ -1,0 +1,25 @@
+# Preuve que le moteur n'est plus lié à la tech : une infirmière à Lyon, sur site, en France.
+version: 1
+identity: { name: "Sarah Martin", city: "Lyon" }
+search:
+  titles:
+    primary: ["infirmier", "infirmière diplômée d'état", "IDE"]
+    related: ["infirmier coordinateur", "infirmier de nuit"]
+    exclude: ["aide-soignant", "auxiliaire de puériculture"]
+  keywords:
+    boost: { urgences: 10, réanimation: 8, pédiatrie: 6 }
+    penalize: { "week-end uniquement": 8 }
+  seniority: { level: junior, years_experience: 2, max_years_required: 4 }
+  contract: { types: [full_time, part_time] }
+  work_mode: { remote: any, cities: [Lyon, Villeurbanne], radius_km: 25 }
+  location:
+    eligible_regions: [FR]
+    countries: [fr]
+  languages: { spoken: { fr: native, en: B1 } }
+scoring: { hot_threshold: 7.0, heuristic_min: 15 }
+sources:
+  enabled: [adzuna]
+  options: { adzuna: { countries: [fr], where: "Lyon", max_results: 100 } }
+llm: { provider: manual, language: fr }
+candidate:
+  summary: "Infirmière DE depuis 2 ans, service d'urgences adultes puis pédiatrie."

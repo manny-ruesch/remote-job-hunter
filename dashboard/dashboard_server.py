@@ -20,8 +20,86 @@ import cv_profiler
 
 import db
 import config
+from rjh.profile import load_profile
+from rjh.manual import ManualService, SqliteTicketStore
+from rjh.web.manual_router import make_manual_router
+from rjh.models import Job
+
+PROFILE_PATH = HUNTER_DIR / "profile.yaml"
+current_rjh_profile = load_profile(PROFILE_PATH if PROFILE_PATH.exists() else HUNTER_DIR / "profile.example.yaml")
+manual_store = SqliteTicketStore(str(HUNTER_DIR / "jobs.db"))
+manual_service = ManualService(manual_store, current_rjh_profile)
+
+def get_unscored_jobs(kind: str, limit: int) -> list[Job]:
+    conn = db.get_conn()
+    c = conn.cursor()
+    if kind == "triage":
+        c.execute("""
+            SELECT id, title, company, location, url, description, salary, job_type 
+            FROM jobs 
+            WHERE (analysis_status = 'pending_manual' OR fit_score = 0.0) AND description IS NOT NULL AND length(description) > 30
+            ORDER BY created_at DESC LIMIT ?
+        """, (limit,))
+        rows = c.fetchall()
+        if not rows:
+            c.execute("""
+                SELECT id, title, company, location, url, description, salary, job_type 
+                FROM jobs 
+                WHERE description IS NOT NULL AND length(description) > 30
+                ORDER BY created_at DESC LIMIT ?
+            """, (min(limit, 10),))
+            rows = c.fetchall()
+    else:
+        c.execute("""
+            SELECT id, title, company, location, url, description, salary, job_type 
+            FROM jobs 
+            WHERE fit_score >= 7.5 AND (tailored_pitch IS NULL OR tailored_pitch = '')
+            ORDER BY fit_score DESC LIMIT ?
+        """, (limit,))
+        rows = c.fetchall()
+    conn.close()
+    
+    return [
+        Job(
+            source="db",
+            source_id=r["id"],
+            company=r["company"] or "",
+            title=r["title"] or "",
+            location=r["location"] or "",
+            url=r["url"] or "",
+            description=r["description"] or "",
+            employment_type=r["job_type"] or "full_time",
+            extra={"db_id": r["id"]}
+        )
+        for r in rows
+    ]
+
+def apply_manual_results(kind: str, results: dict[str, Any]):
+    conn = db.get_conn()
+    c = conn.cursor()
+    for job_id, res in results.items():
+        if kind == "triage":
+            c.execute("""
+                UPDATE jobs 
+                SET fit_score = ?, rationale = ?, gate = ?, analysis_status = 'ok'
+                WHERE id = ?
+            """, (res.score, res.why, res.gate, job_id))
+        elif kind == "dossier":
+            c.execute("""
+                UPDATE jobs 
+                SET tailored_pitch = ?, proof_of_work = ?, cold_outreach = ?, analysis_status = 'ok'
+                WHERE id = ?
+            """, (res.tailored_pitch, res.proof_of_work, res.cold_outreach, job_id))
+    conn.commit()
+    conn.close()
 
 app = FastAPI(title="Remote Job Hunter — Command Center")
+
+app.include_router(make_manual_router(
+    manual_service,
+    pending_jobs=get_unscored_jobs,
+    apply_results=apply_manual_results
+))
 
 app.add_middleware(
     CORSMiddleware,

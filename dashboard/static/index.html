@@ -477,6 +477,105 @@
       transform: translateY(-2px);
     }
 
+    
+    /* Manual Mode Panel */
+    .manual-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .manual-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .manual-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .manual-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .manual-batches-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .manual-batch-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .manual-batch-card.is-followup {
+      border-left: 3px solid var(--brand-red);
+    }
+    .manual-batch-info {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .manual-batch-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .chat-link-btn {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .chat-link-btn:hover {
+      color: var(--text);
+      border-color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .manual-import-box {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px dashed var(--brand-red);
+      border-radius: 8px;
+    }
+    .manual-textarea {
+      width: 100%;
+      background: #050505;
+      color: #e0e0e0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-top: 8px;
+    }
+    .manual-textarea:focus {
+      outline: none;
+      border-color: var(--brand-red);
+    }
+
     /* View Switcher */
     .view-switcher {
       display: flex;
@@ -994,6 +1093,7 @@
         <div class="filter-chip" onclick="setFilter('applied', this)">Postulées <span class="chip-count" id="count-applied">0</span></div>
         <div class="filter-chip" onclick="setFilter('interview', this)">🎯 Entretiens <span class="chip-count" id="count-interview">0</span></div>
         <div class="filter-chip" onclick="setFilter('archived', this)">📦 Archivées <span class="chip-count" id="count-archived">0</span></div>
+        <div class="filter-chip" id="chip-manual" onclick="toggleManualPanel(this)">💬 Mode Manuel (Chat LLM)</div>
       </div>
 
       
@@ -1004,6 +1104,35 @@
       </div>
 
       <input type="text" class="search-input" id="search-box" placeholder="Rechercher une entreprise, un rôle... (Touche '/')" oninput="handleSearch()">
+    </div>
+
+    <!-- Panneau Mode Manuel (Abonnement ChatGPT / Claude / Gemini) -->
+    <div id="manual-panel" class="manual-panel" style="display: none;">
+      <div class="manual-header">
+        <div>
+          <div class="manual-title">💬 Mode Manuel Universel — Copier-Coller pour ChatGPT, Claude & Gemini</div>
+          <div class="manual-subtitle">Analysez vos offres sans clé d'API grâce à votre abonnement grand public habituel.</div>
+        </div>
+        <button class="btn btn-outline" style="border-color: var(--brand-red); color: var(--brand-red);" onclick="generateManualBatches()">
+          ⚡ Exporter un lot pour mon LLM
+        </button>
+      </div>
+
+      <div id="manual-batches-container" class="manual-batches-list">
+        <div style="font-size: 12px; color: var(--text-muted); padding: 8px 0;" id="manual-empty-msg">
+          Aucun lot en attente. Cliquez sur « Exporter un lot pour mon LLM » pour préparer une sélection d'offres.
+        </div>
+      </div>
+
+      <div id="manual-import-box" class="manual-import-box" style="display: none;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text);" id="manual-import-title">Collez la réponse du LLM</div>
+        <textarea id="manual-paste-area" class="manual-textarea" rows="6" spellcheck="false" placeholder="Collez ici le bloc JSON retourné par votre ChatGPT / Claude / Gemini..."></textarea>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="submitManualImport()">📥 Importer et Valider la Réponse</button>
+          <button class="btn btn-outline" onclick="closeManualImport()">Annuler</button>
+          <div id="manual-import-status" style="font-size: 12px; color: var(--brand-red);"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Jobs Grid -->
@@ -2254,6 +2383,151 @@
       setTimeout(() => { t.style.display = 'none'; }, 3000);
     }
     
+    
+    // ==========================================
+    // LOGIQUE MODE MANUEL (COPIER-COLLER LLM)
+    // ==========================================
+    let activeManualTicketId = null;
+
+    async function toggleManualPanel(chipEl) {
+      const p = document.getElementById('manual-panel');
+      if (p.style.display === 'none') {
+        p.style.display = 'block';
+        if (chipEl) chipEl.classList.add('active');
+        await loadManualTickets();
+      } else {
+        p.style.display = 'none';
+        if (chipEl) chipEl.classList.remove('active');
+      }
+    }
+
+    async function loadManualTickets() {
+      try {
+        const res = await fetch('/api/manual/tickets');
+        const data = await res.json();
+        renderManualTickets(data.tickets || []);
+      } catch (e) {
+        console.error('Erreur chargement tickets manuels:', e);
+      }
+    }
+
+    function renderManualTickets(tickets) {
+      const box = document.getElementById('manual-batches-container');
+      const emptyMsg = document.getElementById('manual-empty-msg');
+      if (!tickets || tickets.length === 0) {
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        box.innerHTML = '';
+        if (emptyMsg) box.appendChild(emptyMsg);
+        return;
+      }
+      if (emptyMsg) emptyMsg.style.display = 'none';
+      box.innerHTML = '';
+
+      tickets.forEach((t, i) => {
+        const card = document.createElement('div');
+        card.className = 'manual-batch-card' + (t.parent_id ? ' is-followup' : '');
+        
+        const label = (t.parent_id ? '🔄 Relance · ' : `📦 Lot ${i + 1} · `) + `${t.n_jobs} offre(s) · ≈ ${t.est_tokens} tokens`;
+        card.innerHTML = `
+          <div class="manual-batch-info">${esc(label)}</div>
+          <div class="manual-batch-actions">
+            <button class="btn btn-outline" style="font-size: 11px; padding: 4px 10px;" onclick="copyTicketPrompt('${t.id}')">📋 Copier le prompt</button>
+            <a class="chat-link-btn" href="https://chatgpt.com/" target="_blank" rel="noopener">↗ ChatGPT</a>
+            <a class="chat-link-btn" href="https://claude.ai/new" target="_blank" rel="noopener">↗ Claude</a>
+            <a class="chat-link-btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">↗ Gemini</a>
+            <button class="btn btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="openManualImport('${t.id}', ${t.n_jobs})">📥 Coller la réponse</button>
+          </div>
+        `;
+        box.appendChild(card);
+      });
+    }
+
+    async function generateManualBatches() {
+      showToast('Préparation du lot d\'offres...');
+      try {
+        const res = await fetch('/api/manual/batches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: 'triage', limit: 20 })
+        });
+        const data = await res.json();
+        const count = (data.tickets || []).length;
+        if (count > 0) {
+          showToast(`${count} lot(s) prêt(s) pour analyse !`);
+        } else {
+          showToast('Toutes les offres actuelles sont déjà évaluées !');
+        }
+        await loadManualTickets();
+      } catch (e) {
+        showToast('Erreur génération lot');
+      }
+    }
+
+    async function copyTicketPrompt(ticketId) {
+      try {
+        const res = await fetch(`/api/manual/tickets/${ticketId}`);
+        const data = await res.json();
+        if (data.prompt) {
+          await navigator.clipboard.writeText(data.prompt);
+          showToast('PROMPT COPIÉ ! COLLEZ DANS CHATGPT/CLAUDE');
+        }
+      } catch (e) {
+        showToast('Erreur copie prompt');
+      }
+    }
+
+    function openManualImport(ticketId, nJobs) {
+      activeManualTicketId = ticketId;
+      const box = document.getElementById('manual-import-box');
+      const title = document.getElementById('manual-import-title');
+      const area = document.getElementById('manual-paste-area');
+      const status = document.getElementById('manual-import-status');
+      
+      title.textContent = `📥 Réponse du chat pour le lot de ${nJobs} offre(s)`;
+      area.value = '';
+      status.textContent = '';
+      box.style.display = 'block';
+      area.focus();
+    }
+
+    function closeManualImport() {
+      document.getElementById('manual-import-box').style.display = 'none';
+      activeManualTicketId = null;
+    }
+
+    async function submitManualImport() {
+      if (!activeManualTicketId) return;
+      const area = document.getElementById('manual-paste-area');
+      const text = area.value.trim();
+      const status = document.getElementById('manual-import-status');
+      
+      if (!text) {
+        status.textContent = 'Veuillez coller le JSON retourné par le chat.';
+        return;
+      }
+      
+      status.textContent = 'Validation en cours...';
+      try {
+        const res = await fetch(`/api/manual/tickets/${activeManualTicketId}/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text })
+        });
+        const report = await res.json();
+        
+        const summary = `${report.accepted || 0} offre(s) importée(s)` + (report.missing ? `, ${report.missing} manquante(s)` : ' — complet');
+        showToast(summary);
+        status.textContent = summary;
+        
+        closeManualImport();
+        await loadManualTickets();
+        await loadJobs();
+        await loadStats();
+      } catch (e) {
+        status.textContent = 'Erreur d\'importation du JSON.';
+      }
+    }
+
     // --- Power-User Keyboard Navigation (J / K / A / X / Enter / Ctrl+K) ---
     window.addEventListener('keydown', (e) => {
       // Ignore if user is typing in an input or textarea
