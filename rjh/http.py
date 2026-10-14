@@ -139,3 +139,20 @@ class HttpClient:
 
     def post_json(self, url: str, **kw) -> Any:
         return self.request("POST", url, **kw)
+
+
+def short_http_reason(e: HttpError) -> tuple[str, int]:
+    """(catégorie, statut) : de quoi afficher une erreur utile SANS jamais citer le corps de la réponse
+    (un serveur peut y refléter une clé d'API)."""
+    st = e.status
+    if st in (401, 403):
+        return "auth", st
+    if st == 404:
+        return "404", st
+    if st == 429:
+        return "429", st
+    if 500 <= st < 600:
+        return "5xx", st
+    if st == 0:
+        return "net", 0
+    return "other", st

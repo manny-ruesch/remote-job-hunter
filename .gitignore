@@ -3,6 +3,7 @@
 .env.local
 
 # Local database and cache
+*.db
 jobs.db
 jobs.db-journal
 jobs.db-wal

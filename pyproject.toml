@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remote-job-hunter"
+dynamic = ["version"]
+description = "A private, local command center for ANY job search: ranks offers against your profile, with any LLM (API key, local model, or copy-paste with your ChatGPT/Claude/Gemini subscription)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Manny Ruesch & Contributors" }]
+keywords = ["job-search", "jobs", "llm", "automation", "self-hosted", "privacy", "remote-work"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+]
+# Le coeur (profil, sources, LLM, CLI) n'a besoin que de PyYAML. fastapi + uvicorn sont là pour que
+# `pipx install remote-job-hunter` donne directement un Command Center qui démarre (rjh serve).
+dependencies = [
+  "PyYAML>=6.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+# Fonctions optionnelles et lourdes : jamais installées par défaut.
+autofill = ["playwright>=1.40"]          # pré-remplissage de formulaires (vous validez toujours l'envoi)
+stealth = ["scrapling>=0.4.15"]          # scrapers furtifs (LinkedIn…) : désactivés par défaut, voir les CGU des sites
+dev = ["build", "twine", "ruff"]
+
+[project.scripts]
+rjh = "rjh.cli:main"
+remote-job-hunter = "rjh.cli:main"       # permet aussi : pipx run remote-job-hunter init
+
+[project.urls]
+Homepage = "https://github.com/manny-ruesch/remote-job-hunter"
+Issues = "https://github.com/manny-ruesch/remote-job-hunter/issues"
+Changelog = "https://github.com/manny-ruesch/remote-job-hunter/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "rjh.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["rjh*"]
+
+[tool.setuptools.package-data]
+# L'interface du Command Center (une fois déplacée dans rjh/web/) et les composants HTML voyagent dans le wheel.
+"rjh.web" = ["*.html", "static/**/*"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E9", "F"]                     # erreurs de syntaxe + pyflakes : volontairement peu strict au départ

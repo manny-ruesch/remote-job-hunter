@@ -130,7 +130,8 @@ class LLMProvider(abc.ABC):
                 f"{self.name} : modèle « {self.cfg.model} » introuvable ou retiré (HTTP 404). "
                 "Exécutez provider.check() pour voir les modèles disponibles avec votre clé."
             )
-        return LLMError(str(e))
+        # Autres erreurs : le statut seulement. Le corps de la réponse n'est jamais repris (un serveur peut y refléter une clé).
+        return LLMError(f"{self.name} : erreur HTTP {e.status}" if e.status else f"{self.name} : connexion impossible")
 
     def complete_json(self, system: str, user: str, *, retries: int = 1) -> tuple[Any, LLMResponse]:
         last: Exception | None = None

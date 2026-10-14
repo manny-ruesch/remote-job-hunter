@@ -23,9 +23,11 @@ from ..textutil import est_tokens
 
 MAX_PASTE_CHARS = 200_000
 
+
 class NewBatches(BaseModel):
     kind: str = "triage"
     limit: int = 30
+
 
 class ImportBody(BaseModel):
     text: str

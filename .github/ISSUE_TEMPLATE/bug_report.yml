@@ -1,0 +1,18 @@
+name: Bug
+description: Quelque chose ne fonctionne pas
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "⚠ Ne collez JAMAIS de clé d'API, de jeton ni votre profile.yaml complet. Lancez `rjh doctor --json` : il masque les secrets."
+  - type: textarea
+    id: doctor
+    attributes: { label: "Sortie de `rjh doctor --json`", render: json }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: "Ce que vous attendiez / ce qui s'est passé" }
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes: { label: "Version (`rjh --version`), système, installation (pipx / Docker)" }

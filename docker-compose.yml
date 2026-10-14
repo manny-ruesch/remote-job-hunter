@@ -1,0 +1,32 @@
+# Command Center en un clic sur un NAS ou un VPS.
+#   1. echo "RJH_TOKEN=$(openssl rand -hex 32)" > .env          (le jeton d'accès ; ou python3 -c 'import secrets;print(secrets.token_urlsafe(32))')
+#   2. docker compose run --rm command-center rjh init          (une fois : 4 questions)
+#   3. docker compose up -d                                     -> http://127.0.0.1:5070
+name: remote-job-hunter
+
+services:
+  command-center:
+    build: .
+    # image: ghcr.io/manny-ruesch/remote-job-hunter:latest     # à décommenter une fois l'image publiée
+    restart: unless-stopped
+    ports:
+      # Localhost SEULEMENT, exprès. Pour y accéder de l'extérieur : reverse proxy HTTPS ou réseau privé (Tailscale…),
+      # jamais en ouvrant ce port tel quel.
+      - "127.0.0.1:5070:5070"
+    environment:
+      RJH_TOKEN: ${RJH_TOKEN:?Définissez RJH_TOKEN dans le fichier .env (voir l'étape 1 en haut de ce fichier)}
+      RJH_LANG: ${RJH_LANG:-fr}
+      # Clés facultatives : inutiles en mode manuel. Vides = ignorées ; rjh init peut aussi les ranger dans /data/.env.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+    volumes:
+      # Volume Docker (disque local). Sur un NAS, préférez un chemin LOCAL explicite, par exemple :
+      #   - /volume1/docker/rjh:/data
+      # JAMAIS un partage réseau SMB/NFS : SQLite y est fragile.
+      - rjh-data:/data
+
+volumes:
+  rjh-data:
