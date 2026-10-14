@@ -1,0 +1,4 @@
+include LICENSE README.md CHANGELOG.md
+recursive-include rjh/web *.html
+recursive-include rjh/web/static *
+global-exclude __pycache__ *.pyc

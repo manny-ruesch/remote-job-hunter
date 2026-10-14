@@ -1,0 +1,20 @@
+name: Nouvelle source d'offres
+description: Proposer un site ou une API à supporter
+labels: [source, good first issue]
+body:
+  - type: input
+    id: site
+    attributes: { label: "Site ou API (lien vers sa documentation)" }
+    validations: { required: true }
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options: ["Recherche par mots-clés", "Liste d'offres d'une entreprise (ATS)", "Flux RSS / autre"]
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Conditions d'usage
+      options:
+        - label: "J'ai vérifié que l'API ou le flux autorise cet usage (pas de scraping interdit)"
+          required: true

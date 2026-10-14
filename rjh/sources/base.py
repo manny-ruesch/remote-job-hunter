@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, ClassVar, Mapping
 
-from ..http import HttpClient, HttpError, RateLimiter
+from ..http import HttpClient, HttpError, RateLimiter, short_http_reason
 from ..models import Job
 from ..profile import Profile
 
@@ -94,6 +94,20 @@ class BaseJobSource(abc.ABC):
     def get_json(self, url: str, **kw: Any) -> Any:
         return self.http.get_json(url, **kw)
 
+    def ping(self, profile: Profile) -> tuple[str, str]:
+        """UNE requête minimale pour `rjh doctor`. Retourne (niveau, code) : niveau = ok | warn | fail ;
+        code = « ok », « no_boards » ou la catégorie d'erreur (auth, 404, 429, 5xx, net, other:<statut>).
+        Jamais de corps de réponse ni de secret dans la valeur retournée."""
+        return ("ok", "untested")
+
+    def _ping_request(self, url: str, params: dict, headers: dict) -> tuple[str, str]:
+        try:
+            self.get_json(url, params=params, headers=headers)
+        except HttpError as e:
+            kind, status = short_http_reason(e)
+            return ("fail", kind if kind != "other" else f"other:{status}")
+        return ("ok", "ok")
+
 
 # ------------------------------------------------------------------ par mots-clés ----------
 
@@ -117,6 +131,10 @@ class KeywordSource(BaseJobSource):
 
     def has_more(self, payload: Any, q: SearchQuery) -> bool:
         return False
+
+    def ping(self, profile: Profile) -> tuple[str, str]:
+        q = (self.build_queries(profile) or [SearchQuery(text="test")])[0]
+        return self._ping_request(*self.request(q))
 
     def fetch(self, profile: Profile, prefilter: Prefilter | None = None) -> SourceResult:
         t0, n0 = time.monotonic(), self.http.requests_made
@@ -155,6 +173,12 @@ class BoardSource(BaseJobSource):
     @abc.abstractmethod
     def board_request(self, slug: str) -> tuple[str, dict[str, Any], dict[str, str]]:
         """(url, params, headers) pour lister TOUTES les offres d'une entreprise."""
+
+    def ping(self, profile: Profile) -> tuple[str, str]:
+        slugs = self.boards(profile)
+        if not slugs:
+            return ("warn", "no_boards")
+        return self._ping_request(*self.board_request(slugs[0]))
 
     def company_name(self, slug: str, payload: Any) -> str:
         return slug.replace("-", " ").replace("_", " ").title()
