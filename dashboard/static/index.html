@@ -116,8 +116,11 @@
       animation: none;
       mix-blend-mode: normal;
     }
+    ::view-transition-new(root) {
+      z-index: 9999;
+    }
 
-    * { box-sizing: * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
       background-color: var(--bg);
@@ -1024,7 +1027,7 @@
     </div>
     
     <div class="header-actions">
-      <button class="btn" id="theme-toggle" onclick="toggleTheme()" style="min-width: 100px;">[ ☀️ LIGHT ]</button>
+      <button class="btn" id="theme-toggle" onclick="toggleTheme(event)" style="min-width: 100px;">[ ☀️ LIGHT ]</button>
       <div id="status-pill" class="status-badge">
         <span class="dot"></span>
         <span id="status-text">VEILLE ACTIVE</span>
@@ -1579,6 +1582,7 @@
     const DAMPING = 0.88;
     const INFLUENCE_DIST = 100;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let silkAnchor = { x: origin.x, y: origin.y, vx: 0, vy: 0, alpha: 0 };
 
     function render(time) {
       if (document.hidden) {
@@ -1688,38 +1692,73 @@
       // 4b. Draw Living Spiders on Foreground Canvas
       updateAndDrawSpiders(time, ctxFg);
 
-      // 5. Draw Silk Thread on Foreground Canvas (Over Cards)
-      if (hoveredCard) {
-        const logoPet = document.getElementById('logo-pet');
-        if (logoPet) {
-          const lRect = logoPet.getBoundingClientRect();
-          const cRect = hoveredCard.getBoundingClientRect();
+      // 5. Draw Elastic Silk Thread on Foreground Canvas (Hover + Keyboard J/K)
+      const activeCard = hoveredCard || document.querySelector('.job-card.keyboard-selected');
+      const logoPet = document.getElementById('logo-pet');
+      if (logoPet) {
+        const lRect = logoPet.getBoundingClientRect();
+        const startX = lRect.left + lRect.width / 2;
+        const startY = lRect.top + lRect.height / 2;
 
-          const startX = lRect.left + lRect.width / 2;
-          const startY = lRect.top + lRect.height / 2;
+        if (activeCard) {
+          const cRect = activeCard.getBoundingClientRect();
           const targetX = cRect.left + cRect.width / 2;
           const targetY = cRect.top + 8;
 
-          const wave = Math.sin((time || 0) * 0.008) * 3.5;
-          const ctrlX = (startX + targetX) / 2 + wave;
-          const ctrlY = (startY + targetY) / 2 - 25;
+          if (silkAnchor.alpha <= 0.02 || prefersReducedMotion) {
+            silkAnchor.x = targetX;
+            silkAnchor.y = targetY;
+            silkAnchor.vx = 0;
+            silkAnchor.vy = 0;
+          } else {
+            const SILK_SPRING = 0.18;
+            const SILK_DAMPING = 0.72;
+            silkAnchor.vx = (silkAnchor.vx + (targetX - silkAnchor.x) * SILK_SPRING) * SILK_DAMPING;
+            silkAnchor.vy = (silkAnchor.vy + (targetY - silkAnchor.y) * SILK_SPRING) * SILK_DAMPING;
+            silkAnchor.x += silkAnchor.vx;
+            silkAnchor.y += silkAnchor.vy;
+          }
+          silkAnchor.alpha = Math.min(1, silkAnchor.alpha + 0.12);
+        } else {
+          silkAnchor.alpha = Math.max(0, silkAnchor.alpha - 0.08);
+        }
+
+        if (silkAnchor.alpha > 0.01) {
+          const wave = prefersReducedMotion ? 0 : Math.sin((time || 0) * 0.008) * 3.5;
+          const ctrlX = (startX + silkAnchor.x) / 2 + wave + silkAnchor.vx * 0.8;
+          const ctrlY = (startY + silkAnchor.y) / 2 - 25;
+          const a = silkAnchor.alpha;
 
           ctxFg.save();
           ctxFg.beginPath();
           ctxFg.moveTo(startX, startY);
-          ctxFg.quadraticCurveTo(ctrlX, ctrlY, targetX, targetY);
-          ctxFg.strokeStyle = isLight ? 'rgba(200, 16, 46, 0.75)' : 'rgba(255, 255, 255, 0.6)';
+          ctxFg.quadraticCurveTo(ctrlX, ctrlY, silkAnchor.x, silkAnchor.y);
+          ctxFg.strokeStyle = isLight ? `rgba(200, 16, 46, ${0.75 * a})` : `rgba(255, 255, 255, ${0.65 * a})`;
           ctxFg.lineWidth = 1.6;
           ctxFg.shadowBlur = 8;
-          ctxFg.shadowColor = isLight ? 'rgba(200, 16, 46, 0.6)' : 'rgba(255, 255, 255, 0.8)';
+          ctxFg.shadowColor = isLight ? `rgba(200, 16, 46, ${0.6 * a})` : `rgba(255, 255, 255, ${0.8 * a})`;
           ctxFg.stroke();
 
+          // Anchor node on card
           ctxFg.beginPath();
-          ctxFg.arc(targetX, targetY, 3, 0, Math.PI * 2);
-          ctxFg.fillStyle = isLight ? '#C8102E' : '#FFFFFF';
+          ctxFg.arc(silkAnchor.x, silkAnchor.y, 3, 0, Math.PI * 2);
+          ctxFg.fillStyle = isLight ? `rgba(200, 16, 46, ${a})` : `rgba(255, 255, 255, ${a})`;
           ctxFg.shadowBlur = 12;
           ctxFg.shadowColor = isLight ? '#C8102E' : '#FFFFFF';
           ctxFg.fill();
+
+          // Traveling silk impulse bead along quadratic Bezier curve
+          if (!prefersReducedMotion) {
+            const beadT = (t * 0.9) % 1;
+            const u = 1 - beadT;
+            const bx = u * u * startX + 2 * u * beadT * ctrlX + beadT * beadT * silkAnchor.x;
+            const by = u * u * startY + 2 * u * beadT * ctrlY + beadT * beadT * silkAnchor.y;
+            ctxFg.beginPath();
+            ctxFg.arc(bx, by, 2.4, 0, Math.PI * 2);
+            ctxFg.fillStyle = isLight ? `rgba(200, 16, 46, ${0.95 * a})` : `rgba(255, 255, 255, ${0.95 * a})`;
+            ctxFg.shadowBlur = 10;
+            ctxFg.fill();
+          }
           ctxFg.restore();
         }
       }
@@ -1806,6 +1845,15 @@
       
       status.textContent = "Extraction du texte PDF & Analyse Gemini 3.8 Flash...";
 
+      const pulseDrops = () => {
+        if (window.triggerSonarRadarWave && dropzone) {
+          const r = dropzone.getBoundingClientRect();
+          window.triggerSonarRadarWave(r.left + r.width / 2, r.top + r.height / 2);
+        }
+      };
+      pulseDrops();
+      const dropRadarInterval = setInterval(pulseDrops, 1800);
+
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -1840,11 +1888,34 @@
         status.style.color = "var(--color-hot)";
         status.textContent = `⚠️ Erreur réseau : ${err.message}`;
       } finally {
+        clearInterval(dropRadarInterval);
         gsap.killTweensOf(spider, "left");
         gsap.to(spider, { top: "-30px", left: "50%", duration: 0.6, ease: "power3.in" });
         gsap.to(content, { opacity: 1, duration: 0.4 });
         triggerJobsRefreshAnimation();
       }
+    }
+
+    function animateCardsEntrance() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const cards = document.querySelectorAll('#jobs-container .job-card');
+      if (cards.length > 0) {
+        gsap.fromTo(
+          cards,
+          { y: -36, opacity: 0, scale: 0.97 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.52, stagger: 0.04, ease: "back.out(1.4)", clearProps: "transform" }
+        );
+      }
+      const rings = document.querySelectorAll('#jobs-container .score-ring-progress');
+      rings.forEach((circle, i) => {
+        const targetOffset = parseFloat(circle.getAttribute('data-target-offset') || circle.getAttribute('stroke-dashoffset') || '113.1');
+        circle.setAttribute('data-target-offset', String(targetOffset));
+        gsap.fromTo(
+          circle,
+          { strokeDashoffset: 113.1 },
+          { strokeDashoffset: targetOffset, duration: 0.85, delay: 0.1 + i * 0.04, ease: "power3.out" }
+        );
+      });
     }
 
     function triggerJobsRefreshAnimation() {
@@ -1854,10 +1925,25 @@
     const logoPet = document.getElementById('logo-pet');
     if (logoPet) {
       logoPet.addEventListener('mouseenter', () => {
-        gsap.to('#logo-pet svg', { rotation: 180, scale: 1.5, duration: 0.4, ease: "back.out(1.7)" });
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        gsap.to('#logo-pet img', { rotation: 15, scale: 1.22, duration: 0.35, ease: "back.out(2)" });
       });
       logoPet.addEventListener('mouseleave', () => {
-        gsap.to('#logo-pet svg', { rotation: 0, scale: 1, duration: 0.4, ease: "power2.out" });
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        gsap.to('#logo-pet img', { rotation: 0, scale: 1, duration: 0.35, ease: "power2.out" });
+      });
+      logoPet.addEventListener('click', () => {
+        const rect = logoPet.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        if (window.triggerSonarRadarWave) window.triggerSonarRadarWave(cx, cy);
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          gsap.fromTo(
+            '#logo-pet img',
+            { scale: 0.85, rotation: -15 },
+            { scale: 1, rotation: 360, duration: 0.65, ease: "elastic.out(1, 0.4)" }
+          );
+        }
       });
     }
 
@@ -1870,22 +1956,50 @@
       if (btn) btn.textContent = saved === 'dark' ? '[ ☀️ LIGHT ]' : '[ 🌙 DARK ]';
     }
 
-    function toggleTheme() {
+    function toggleTheme(evt) {
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
       const next = current === 'dark' ? 'light' : 'dark';
+      const btn = document.getElementById('theme-toggle');
+      let x = window.innerWidth / 2;
+      let y = 32;
+      if (evt && typeof evt.clientX === 'number' && (evt.clientX || evt.clientY)) {
+        x = evt.clientX;
+        y = evt.clientY;
+      } else if (btn) {
+        const r = btn.getBoundingClientRect();
+        x = r.left + r.width / 2;
+        y = r.top + r.height / 2;
+      }
 
       function apply() {
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('rh_theme', next);
-        const btn = document.getElementById('theme-toggle');
         if (btn) btn.textContent = next === 'dark' ? '[ ☀️ LIGHT ]' : '[ 🌙 DARK ]';
-        if (window.triggerSonarRadarWave) window.triggerSonarRadarWave();
       }
 
-      if (document.startViewTransition) {
-        document.startViewTransition(() => apply());
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (document.startViewTransition && !reduced) {
+        const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+        const transition = document.startViewTransition(() => apply());
+        transition.ready.then(() => {
+          document.documentElement.animate(
+            {
+              clipPath: [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${endRadius}px at ${x}px ${y}px)`
+              ]
+            },
+            {
+              duration: 550,
+              easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+              pseudoElement: '::view-transition-new(root)'
+            }
+          );
+        }).catch(() => {});
+        if (window.triggerSonarRadarWave) window.triggerSonarRadarWave(x, y);
       } else {
         apply();
+        if (window.triggerSonarRadarWave) window.triggerSonarRadarWave(x, y);
       }
     }
 
@@ -1995,11 +2109,20 @@
       document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
       if (el) el.classList.add('active');
 
-      document.getElementById('jobs-container').style.display = mode === 'grid' ? 'grid' : 'none';
-      document.getElementById('table-view-container').style.display = mode === 'table' ? 'block' : 'none';
-      document.getElementById('kanban-view-container').style.display = mode === 'kanban' ? 'grid' : 'none';
+      const gridEl = document.getElementById('jobs-container');
+      const tableEl = document.getElementById('table-view-container');
+      const kanbanEl = document.getElementById('kanban-view-container');
+
+      gridEl.style.display = mode === 'grid' ? 'grid' : 'none';
+      tableEl.style.display = mode === 'table' ? 'block' : 'none';
+      kanbanEl.style.display = mode === 'kanban' ? 'grid' : 'none';
 
       renderActiveView();
+
+      const activeContainer = mode === 'grid' ? gridEl : (mode === 'table' ? tableEl : kanbanEl);
+      if (activeContainer && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.fromTo(activeContainer, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.25, ease: "power2.out", clearProps: "transform" });
+      }
     }
 
     function renderActiveView() {
@@ -2109,6 +2232,7 @@
           </div>
         `;
       }).join('');
+      animateCardsEntrance();
     }
 
     function togglePitch(btn, evt) {
@@ -2293,7 +2417,12 @@
         `;
 
         switchModalTab('pitch');
-        document.getElementById('detail-modal').style.display = 'flex';
+        const detailModal = document.getElementById('detail-modal');
+        detailModal.style.display = 'flex';
+        const card = detailModal.querySelector('.modal-card');
+        if (card && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          gsap.fromTo(card, { y: 24, scale: 0.95, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.3, ease: "power3.out", clearProps: "transform" });
+        }
       } catch (e) { console.error('Modal error:', e); }
     }
 
@@ -2302,7 +2431,13 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       if (el) el.classList.add('active');
       else document.querySelector(`.modal-tab[onclick*="${tabKey}"]`)?.classList.add('active');
-      document.getElementById(`tab-${tabKey}`)?.classList.add('active');
+      const activeTabEl = document.getElementById(`tab-${tabKey}`);
+      if (activeTabEl) {
+        activeTabEl.classList.add('active');
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          gsap.fromTo(activeTabEl, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.2, ease: "power2.out", clearProps: "transform" });
+        }
+      }
       
       if (tabKey === 'pow') {
         setTimeout(async () => {
@@ -2440,7 +2575,12 @@
       }
     }
     async function openLogsModal() {
-      document.getElementById('logs-modal').style.display = 'flex';
+      const logsModal = document.getElementById('logs-modal');
+      logsModal.style.display = 'flex';
+      const card = logsModal.querySelector('.modal-card');
+      if (card && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.fromTo(card, { y: 24, scale: 0.95, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.3, ease: "power3.out", clearProps: "transform" });
+      }
       refreshLogs();
     }
     async function refreshLogs() {
