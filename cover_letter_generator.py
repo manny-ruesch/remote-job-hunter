@@ -1,5 +1,6 @@
 import os
 import sys
+import html
 import json
 import urllib.request
 import subprocess
@@ -12,7 +13,10 @@ sys.path.append(str(BASE_DIR))
 import db
 import config
 
-EDGE_PATH = Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
+EDGE_CANDIDATES = [
+    Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+    Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+]
 DESKTOP_DIR = Path("E:/Users/Manny/Desktop") if Path("E:/Users/Manny/Desktop").exists() else Path.home() / "Desktop"
 
 COVER_LETTER_SYSTEM_PROMPT = f"""You are an elite executive career advisor writing a bespoke cover letter for {config.APPLICANT['name']}.
@@ -83,8 +87,16 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
     if not paragraphs:
         paragraphs = [letter_text]
 
-    first_para = paragraphs[0] if paragraphs else "Dear Team,"
-    rest_paras = paragraphs[1:] if len(paragraphs) > 1 else []
+    first_para = html.escape(paragraphs[0]) if paragraphs else "Dear Team,"
+    rest_paras = [html.escape(p) for p in paragraphs[1:]] if len(paragraphs) > 1 else []
+    safe_comp_html = html.escape(company)
+    safe_title_html = html.escape(title)
+    safe_name_html = html.escape(config.APPLICANT['name'])
+    safe_role_html = html.escape(config.APPLICANT['title'])
+    safe_loc_html = html.escape(config.APPLICANT['location'])
+    safe_phone_html = html.escape(config.APPLICANT['phone'])
+    safe_email_html = html.escape(config.APPLICANT['email'])
+    safe_port_html = html.escape(config.APPLICANT['portfolio'])
 
     from datetime import datetime
     current_date = datetime.now().strftime("%B %Y")
@@ -93,7 +105,7 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cover Letter — {config.APPLICANT['name']} for {company}</title>
+  <title>Cover Letter — {safe_name_html} for {safe_comp_html}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -202,26 +214,26 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
 <body>
   <header>
     <div>
-      <div class="candidate-name">{config.APPLICANT['name']}</div>
-      <div class="candidate-title">{config.APPLICANT['title']}</div>
+      <div class="candidate-name">{safe_name_html}</div>
+      <div class="candidate-title">{safe_role_html}</div>
     </div>
     <div class="contact-block">
-      {config.APPLICANT['location']}<br>
-      {config.APPLICANT['phone']} • <a href="mailto:{config.APPLICANT['email']}">{config.APPLICANT['email']}</a><br>
-      <a href="{config.APPLICANT['portfolio']}" target="_blank">{config.APPLICANT['portfolio'].replace('https://', '')}</a>
+      {safe_loc_html}<br>
+      {safe_phone_html} • <a href="mailto:{safe_email_html}">{safe_email_html}</a><br>
+      <a href="{safe_port_html}" target="_blank">{safe_port_html.replace('https://', '')}</a>
     </div>
   </header>
 
   <div class="meta-row">
     <div class="recipient-block">
-      <strong>{company}</strong>
+      <strong>{safe_comp_html}</strong>
       Hiring & GTM Systems Team
     </div>
     <div>{current_date}</div>
   </div>
 
   <div class="subject-line">
-    Application: {title}
+    Application: {safe_title_html}
   </div>
 
   <p class="lead-paragraph">{first_para}</p>
@@ -232,7 +244,7 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
     html_content += f"""
   <div class="sign-off">
     Warm regards,<br>
-    <div class="signature-name">{config.APPLICANT['name']}</div>
+    <div class="signature-name">{safe_name_html}</div>
   </div>
 </body>
 </html>"""
@@ -245,10 +257,11 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
     with open(out_html, "w", encoding="utf-8") as f:
         f.write(html_content)
 
-    # Compile via headless Edge
-    if EDGE_PATH.exists():
+    # Strategy 1: Compile via headless Edge
+    edge_bin = next((p for p in EDGE_CANDIDATES if p.exists()), None)
+    if edge_bin:
         cmd = [
-            str(EDGE_PATH),
+            str(edge_bin),
             "--headless",
             "--disable-gpu",
             f"--print-to-pdf={str(out_pdf)}",
@@ -260,7 +273,22 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
             out_html.unlink()
         return True, str(out_pdf), letter_text
 
-    return False, "Microsoft Edge not found for PDF rendering", letter_text
+    # Strategy 2: Cross-platform Playwright Chromium PDF fallback
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(f"file:///{str(out_html).replace(os.sep, '/')}", wait_until="networkidle")
+            page.pdf(path=str(out_pdf), format="A4", print_background=True)
+            browser.close()
+        if out_html.exists():
+            out_html.unlink()
+        return True, str(out_pdf), letter_text
+    except Exception:
+        pass
+
+    return False, "No PDF renderer available (Edge or Playwright Chromium required)", letter_text
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

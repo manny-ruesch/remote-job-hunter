@@ -277,5 +277,68 @@ class UnifiedScannerTest(unittest.TestCase):
         self.assertEqual(data["collected"], 6)
 
 
+class DashboardAuditTest(unittest.TestCase):
+    def test_rjh_token_middleware_and_health_endpoint(self):
+        import os
+        from fastapi.testclient import TestClient
+        from rjh.web.server import app
+
+        client = TestClient(app)
+        # Without RJH_TOKEN set, local requests succeed
+        os.environ.pop("RJH_TOKEN", None)
+        self.assertEqual(client.get("/api/health").status_code, 200)
+        self.assertEqual(client.get("/api/stats").status_code, 200)
+
+        # With RJH_TOKEN set, /api/health stays open for Docker HEALTHCHECK, while /api/stats and /api/manual/tickets require token
+        os.environ["RJH_TOKEN"] = "super-secret-token"
+        try:
+            self.assertEqual(client.get("/api/health").status_code, 200)
+            self.assertEqual(client.get("/api/stats").status_code, 401)
+            self.assertEqual(client.get("/api/manual/tickets").status_code, 401)
+            self.assertEqual(
+                client.get("/api/stats", headers={"Authorization": "Bearer super-secret-token"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                client.get("/api/manual/tickets", headers={"Authorization": "Bearer super-secret-token"}).status_code,
+                200,
+            )
+        finally:
+            os.environ.pop("RJH_TOKEN", None)
+
+    def test_manual_triage_import_updates_status_and_tech_match(self):
+        import os
+        from dashboard.dashboard_server import apply_manual_results
+        from rjh.analysis import TriageResult, DossierResult
+        from rjh.models import Job
+        from rjh.scanner import init_jobs_db, upsert_job_record
+
+        tmp_db = Path(tempfile.mkdtemp()) / "audit.db"
+        init_jobs_db(tmp_db)
+        job = Job("ashby", "1", "TestCo", "Automation Engineer", "https://example.org/1", "Remote", "n8n python")
+        upsert_job_record(tmp_db, job, status="new", analysis_status="pending_manual")
+
+        os.environ["RJH_DB"] = str(tmp_db)
+        try:
+            apply_manual_results("triage", {job.id: TriageResult(job.id, 8.8, "apply", None, "Top match", ["n8n", "Python"])})
+            con = sqlite3.connect(tmp_db)
+            con.row_factory = sqlite3.Row
+            row = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job.id,)).fetchone())
+            self.assertEqual(row["status"], "hot")
+            self.assertEqual(row["fit_score"], 8.8)
+            self.assertEqual(row["tech_match"], "n8n, Python")
+            self.assertEqual(row["analysis_status"], "ok")
+
+            dr = DossierResult(job.id, "Hook test", "Pitch test", "Cold DM test", ["Q1?"], company="TestCo", title="Automation Engineer")
+            apply_manual_results("dossier", {job.id: dr})
+            row2 = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job.id,)).fetchone())
+            con.close()
+            self.assertEqual(row2["tailored_pitch"], "Pitch test")
+            self.assertIn("mermaid_diagram", row2["proof_of_work"])
+            self.assertIn("Cold DM test", row2["cold_outreach"])
+        finally:
+            os.environ.pop("RJH_DB", None)
+
+
 if __name__ == "__main__":
     unittest.main()

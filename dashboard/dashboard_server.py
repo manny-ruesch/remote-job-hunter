@@ -1,13 +1,14 @@
 import os
 import sys
 import json
+import hmac
 import time
 import subprocess
 from pathlib import Path
 from typing import Optional, Any
 
 import psutil
-from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,10 +26,31 @@ from rjh.manual import ManualService, SqliteTicketStore
 from rjh.web.manual_router import make_manual_router
 from rjh.models import Job
 
-PROFILE_PATH = HUNTER_DIR / "profile.yaml"
+ACTIVE_HOME = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else HUNTER_DIR
+PROFILE_PATH = ACTIVE_HOME / "profile.yaml" if (ACTIVE_HOME / "profile.yaml").exists() else HUNTER_DIR / "profile.yaml"
 current_rjh_profile = load_profile(PROFILE_PATH if PROFILE_PATH.exists() else HUNTER_DIR / "profile.example.yaml")
-manual_store = SqliteTicketStore(str(HUNTER_DIR / "jobs.db"))
+ACTIVE_DB = os.environ.get("RJH_DB") or str((ACTIVE_HOME if (ACTIVE_HOME / "jobs.db").exists() else HUNTER_DIR) / "jobs.db")
+manual_store = SqliteTicketStore(ACTIVE_DB)
 manual_service = ManualService(manual_store, current_rjh_profile)
+
+
+def _count_configured_sources() -> int:
+    s = current_rjh_profile.sources
+    board_sources = set(s.boards.keys()) & set(s.enabled)
+    total_boards = sum(len(s.boards.get(b, [])) for b in board_sources)
+    other_sources = len([name for name in s.enabled if name not in board_sources])
+    return max(1, total_boards + other_sources)
+
+
+def check_rjh_token(request: Request) -> None:
+    expected = os.environ.get("RJH_TOKEN", "").strip()
+    if not expected:
+        return
+    auth = request.headers.get("authorization", "")
+    bearer = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+    candidate = bearer or request.headers.get("x-rjh-token", "") or request.query_params.get("token", "") or request.cookies.get("rjh_token", "")
+    if not candidate or not hmac.compare_digest(candidate, expected):
+        raise HTTPException(status_code=401, detail="Accès refusé : jeton RJH_TOKEN requis.")
 
 def get_unscored_jobs(kind: str, limit: int) -> list[Job]:
     conn = db.get_conn()
@@ -77,28 +99,63 @@ def get_unscored_jobs(kind: str, limit: int) -> list[Job]:
 def apply_manual_results(kind: str, results: dict[str, Any]):
     conn = db.get_conn()
     c = conn.cursor()
+    hot_th = current_rjh_profile.scoring.hot_threshold
     for job_id, res in results.items():
         if kind == "triage":
+            kws = ", ".join(getattr(res, "keywords", []) or [])
             c.execute("""
                 UPDATE jobs 
-                SET fit_score = ?, rationale = ?, gate = ?, analysis_status = 'ok'
+                SET fit_score = ?,
+                    rationale = ?,
+                    gate = ?,
+                    tech_match = CASE WHEN ? != '' THEN ? ELSE tech_match END,
+                    pitch_hook = CASE WHEN pitch_hook IS NULL OR pitch_hook = '' THEN ? ELSE pitch_hook END,
+                    status = CASE
+                        WHEN status IN ('applied', 'interview', 'archived') THEN status
+                        WHEN ? >= ? THEN 'hot'
+                        ELSE 'screened'
+                    END,
+                    analysis_status = 'ok'
                 WHERE id = ?
-            """, (res.score, res.why, res.gate, job_id))
+            """, (res.score, res.why, res.gate, kws, kws, res.why, res.score, hot_th, job_id))
         elif kind == "dossier":
             c.execute("""
                 UPDATE jobs 
-                SET tailored_pitch = ?, proof_of_work = ?, cold_outreach = ?, analysis_status = 'ok'
+                SET pitch_hook = CASE WHEN ? != '' THEN ? ELSE pitch_hook END,
+                    tailored_pitch = ?,
+                    proof_of_work = ?,
+                    cold_outreach = ?,
+                    analysis_status = 'ok'
                 WHERE id = ?
-            """, (res.tailored_pitch, res.proof_of_work, res.cold_outreach, job_id))
+            """, (res.hook, res.hook, res.tailored_pitch, res.proof_of_work, res.cold_outreach, job_id))
     conn.commit()
     conn.close()
 
 app = FastAPI(title="Remote Job Hunter — Command Center")
 
+
+@app.middleware("http")
+async def rjh_token_middleware(request: Request, call_next):
+    expected = os.environ.get("RJH_TOKEN", "").strip()
+    if expected and request.url.path.startswith("/api/") and request.url.path != "/api/health":
+        auth = request.headers.get("authorization", "")
+        bearer = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+        candidate = (
+            bearer
+            or request.headers.get("x-rjh-token", "")
+            or request.query_params.get("token", "")
+            or request.cookies.get("rjh_token", "")
+        )
+        if not candidate or not hmac.compare_digest(candidate, expected):
+            return JSONResponse(status_code=401, content={"detail": "Accès refusé : jeton RJH_TOKEN requis."})
+    return await call_next(request)
+
+
 app.include_router(make_manual_router(
     manual_service,
     pending_jobs=get_unscored_jobs,
-    apply_results=apply_manual_results
+    apply_results=apply_manual_results,
+    require_auth=check_rjh_token,
 ))
 
 app.add_middleware(
@@ -309,10 +366,10 @@ async def health_check():
     return {
         "status": "ok",
         "gemini_model": config.GEMINI_MODEL,
-        "gemini_status": "operational" if bool(config.GOOGLE_API_KEY) else "unconfigured",
+        "gemini_status": "operational" if bool(config.GOOGLE_API_KEY) else "manual_mode",
         "database": "sqlite_wal",
-        "sources_count": 47,
-        "active_profile": cv_profiler.get_active_profile().get("target_role", "AI Automation Builder")
+        "sources_count": _count_configured_sources(),
+        "active_profile": cv_profiler.get_active_profile().get("target_role") or cv_profiler.get_active_profile().get("title", "AI Automation Builder")
     }
 
 @app.get("/api/candidate-profile")
