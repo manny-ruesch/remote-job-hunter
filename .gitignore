@@ -24,6 +24,8 @@ candidate_profile.json
 profile.yaml
 uploaded_cv.pdf
 cover_letter_*.html
+temp_cover_letter_*.html
+tailored_cvs/
 *.pdf
 tunnel_url.txt
 tunnel.log
