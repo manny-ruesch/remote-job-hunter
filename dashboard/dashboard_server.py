@@ -9,7 +9,7 @@ from typing import Optional, Any
 
 import psutil
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -354,8 +354,50 @@ async def generate_cover_letter(job_id: str):
         "success": True,
         "pdf_path": pdf_path,
         "filename": Path(pdf_path).name,
+        "download_url": f"/api/jobs/{job_id}/download-cover-letter",
         "text": letter_text
     }
+
+
+@app.post("/api/jobs/{job_id}/generate-cv")
+async def generate_tailored_cv(job_id: str):
+    import cv_tailor
+    success, payload = cv_tailor.create_tailored_cv_pdf(job_id, sync_active_cv=True)
+    if not success:
+        raise HTTPException(status_code=500, detail=payload.get("error", "CV compilation failed"))
+    return payload
+
+
+@app.get("/api/jobs/{job_id}/download-cv")
+async def download_tailored_cv(job_id: str):
+    import cv_tailor
+    job = db.get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    safe_company = "".join(c for c in (job.get("company") or "Company") if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_") or "Company"
+    pdf_path = cv_tailor.TAILORED_DIR / f"CV_Manny_Ruesch_{safe_company}.pdf"
+    if not pdf_path.exists():
+        ok, payload = cv_tailor.create_tailored_cv_pdf(job_id, sync_active_cv=True)
+        if not ok:
+            raise HTTPException(status_code=500, detail=payload.get("error", "CV compilation failed"))
+        pdf_path = Path(payload["local_pdf_path"])
+    return FileResponse(path=str(pdf_path), media_type="application/pdf", filename=pdf_path.name)
+
+
+@app.get("/api/jobs/{job_id}/download-cover-letter")
+async def download_cover_letter(job_id: str):
+    import cover_letter_generator
+    job = db.get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    safe_company = "".join(c for c in (job.get("company") or "Company") if c.isalnum() or c in (" ", "-", "_")).strip()
+    pdf_path = cover_letter_generator.DESKTOP_DIR / f"Cover_Letter_{safe_company}.pdf"
+    if not pdf_path.exists():
+        ok, out_path, _ = cover_letter_generator.create_cover_letter_pdf(job_id)
+        if not ok:
+            raise HTTPException(status_code=500, detail=out_path)
+        pdf_path = Path(out_path)
+    return FileResponse(path=str(pdf_path), media_type="application/pdf", filename=pdf_path.name)
 
 def _run_hunter_worker():
     bat_path = HUNTER_DIR / "run_hunter.bat"

@@ -339,6 +339,33 @@ class DashboardAuditTest(unittest.TestCase):
         finally:
             os.environ.pop("RJH_DB", None)
 
+    def test_cv_tailor_single_column_ats_and_html_audit(self):
+        import cv_tailor
+        fake_job = {
+            "id": "job123",
+            "company": "Pigment",
+            "title": "Revenue Operations & Automation Engineer",
+            "tech_match": "n8n, Python, HubSpot, PostgreSQL, REST API",
+            "description_snippet": "Build GTM workflows in HubSpot, n8n, Python and SQL with webhook orchestration.",
+        }
+        kws = cv_tailor.extract_job_keywords(fake_job)
+        self.assertIn("n8n", kws)
+        self.assertIn("Python", kws)
+        plan = cv_tailor.build_deterministic_tailoring(fake_job, kws)
+        html_doc = cv_tailor.render_ats_cv_html(fake_job, plan)
+        self.assertIn("Professional Summary", html_doc)
+        self.assertIn("Core Competencies &amp; Technical Stack", html_doc)
+        self.assertIn("Professional Experience", html_doc)
+        self.assertIn("Education &amp; Languages", html_doc)
+        self.assertIn("Pigment", html_doc)
+
+        dummy_pdf = Path(tempfile.mkdtemp()) / "dummy.pdf"
+        dummy_pdf.write_bytes(b"%PDF-1.4\n1 0 obj << /Type /Pages >>\n2 0 obj << /Type /Page >>\n")
+        audit = cv_tailor.audit_ats_pdf(dummy_pdf, html_doc, kws)
+        self.assertEqual(audit["page_count"], 1)
+        self.assertTrue(audit["linear_order_ok"])
+        self.assertGreaterEqual(audit["ats_score"], 85)
+
 
 if __name__ == "__main__":
     unittest.main()

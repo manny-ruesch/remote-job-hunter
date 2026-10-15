@@ -1204,7 +1204,7 @@
         <div class="modal-tab active" onclick="switchModalTab('pitch', this)">PITCH</div>
         <div class="modal-tab" onclick="switchModalTab('pow', this)">ARCHITECTURE POW</div>
         <div class="modal-tab" onclick="switchModalTab('cold', this)">COLD OUTREACH</div>
-        <div class="modal-tab" onclick="switchModalTab('cover', this)">COVER LETTER PDF</div>
+        <div class="modal-tab" onclick="switchModalTab('cover', this)">CV ATS &amp; LETTRE PDF</div>
       </div>
 
       <!-- Tab Contents -->
@@ -2226,7 +2226,8 @@
 
         document.getElementById('modal-action-bar').innerHTML = `
           <button class="btn btn-primary" onclick="triggerAutoFill('${j.id}')">AUTO-FILL</button>
-          <button class="btn" onclick="quickGenerateCoverLetter('${j.id}')">CRÉER PDF</button>
+          <button class="btn" onclick="quickGenerateTailoredCV('${j.id}')">CV ATS (PDF)</button>
+          <button class="btn" onclick="quickGenerateCoverLetter('${j.id}')">LETTRE PDF</button>
           ${j.url ? `<a href="${j.url}" target="_blank" class="btn" style="text-decoration: none;">LIEN OFFICIEL ↗</a>` : ''}
         `;
 
@@ -2266,10 +2267,28 @@
         }
 
         document.getElementById('tab-cover').innerHTML = `
-          <div style="border: 1px dashed var(--border); padding: 24px; text-align: center;">
-            <div style="color: var(--accent); margin-bottom: 16px;">GÉNÉRER LA LETTRE DE MOTIVATION (PDF)</div>
-            <button class="btn btn-primary" onclick="quickGenerateCoverLetter('${j.id}')">CRÉER LE PDF</button>
-            <div id="cover-letter-status" style="margin-top: 14px; font-size: 11px;"></div>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+            <div style="border: 1px solid var(--border); padding: 18px; background: var(--bg-card);">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <div style="color: var(--accent); font-weight: 700; font-size: 12px;">📄 CV SUR-MESURE (OPTIMISÉ RECRUTEUR + 100% ATS)</div>
+                  <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;">Architecture 1 Page A4 • Flux Linéaire 1 Colonne (Workday, Greenhouse, Lever, Ashby) • Editorial Warm Luxury</div>
+                </div>
+                <button class="btn btn-primary" onclick="quickGenerateTailoredCV('${j.id}')">ADAPTER MON CV POUR ${esc(j.company.toUpperCase())}</button>
+              </div>
+              <div id="tailored-cv-status" style="margin-top: 10px; font-size: 11.5px;"></div>
+            </div>
+
+            <div style="border: 1px dashed var(--border); padding: 18px; background: var(--bg-card);">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <div style="color: var(--accent); font-weight: 700; font-size: 12px;">✒️ LETTRE DE MOTIVATION EXÉCUTIVE (PDF)</div>
+                  <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;">Prose littéraire ciblée sur les enjeux opérationnels de ${esc(j.company)} • Rendu vectoriel A4</div>
+                </div>
+                <button class="btn" onclick="quickGenerateCoverLetter('${j.id}')">GÉNÉRER LA LETTRE PDF</button>
+              </div>
+              <div id="cover-letter-status" style="margin-top: 10px; font-size: 11.5px;"></div>
+            </div>
           </div>
         `;
 
@@ -2299,13 +2318,73 @@
       }
     }
 
+    async function quickGenerateTailoredCV(jobId) {
+      showToast('ADAPTATION DU CV ATS EN COURS...');
+      switchModalTab('cover');
+      const box = document.getElementById('tailored-cv-status');
+      if (box) box.innerHTML = `<div style="color: var(--text-muted);">⏳ Alignement des mots-clés ATS, tri des réalisations et compilation vectorielle A4...</div>`;
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/generate-cv`, { method: 'POST' });
+        const d = await res.json();
+        if (d.success) {
+          showToast(`CV ATS PRÊT : ${d.filename}`);
+          if (box && d.ats_audit) {
+            const a = d.ats_audit;
+            const checksHtml = (a.checks || []).map(c =>
+              `<div style="color: ${c.ok ? '#22c55e' : 'var(--color-hot)'}; margin-bottom: 3px;">${c.ok ? '✔' : '⚠'} ${esc(c.label)}</div>`
+            ).join('');
+            const kwHtml = (a.matched_keywords || []).map(k =>
+              `<span style="display: inline-block; padding: 2px 8px; border: 1px solid var(--accent); background: var(--bg-main); color: var(--text-main); font-size: 10.5px;">${esc(k)}</span>`
+            ).join(' ');
+            box.innerHTML = `
+              <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <span style="color: #22c55e; font-weight: 700;">✔ SCORE ATS : ${a.ats_score}/100</span>
+                    <span style="color: var(--text-muted); margin-left: 8px;">• ${a.page_count} Page A4 • Synchronisé avec AUTO-FILL</span>
+                  </div>
+                  <a href="${d.download_url}" target="_blank" class="btn btn-primary" style="text-decoration: none;">📥 TÉLÉCHARGER ${esc(d.filename)}</a>
+                </div>
+                <div style="margin-bottom: 8px; color: var(--text-muted);">Titre adapté : <strong style="color: var(--text-main);">${esc(a.headline)}</strong></div>
+                <div style="margin-bottom: 10px;">${checksHtml}</div>
+                <div style="margin-bottom: 6px; color: var(--text-muted); font-size: 10.5px;">MOTS-CLÉS DE L'OFFRE INJECTÉS &amp; MIS EN GRAS :</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 5px;">${kwHtml}</div>
+                <div style="margin-top: 10px; color: var(--text-muted); font-size: 10.5px;">Sauvegardé sur le Bureau : <code>${esc(d.pdf_path)}</code></div>
+              </div>
+            `;
+          }
+        } else {
+          showToast('ERR: CV COMPILATION FAILED');
+          if (box) box.innerHTML = `<div style="color: var(--color-hot);">⚠️ Erreur : ${esc(d.detail || 'Échec de génération')}</div>`;
+        }
+      } catch (e) {
+        showToast('ERR: FATAL EXCEPTION');
+        if (box) box.innerHTML = `<div style="color: var(--color-hot);">⚠️ Erreur réseau : ${esc(e.message)}</div>`;
+      }
+    }
+
     async function quickGenerateCoverLetter(jobId) {
-      showToast('COMPILING DOCUMENT...');
+      showToast('COMPILING COVER LETTER...');
+      switchModalTab('cover');
+      const box = document.getElementById('cover-letter-status');
+      if (box) box.innerHTML = `<div style="color: var(--text-muted);">⏳ Rédaction exécutive et compilation PDF A4...</div>`;
       try {
         const res = await fetch(`/api/jobs/${jobId}/generate-cover-letter`, { method: 'POST' });
         const d = await res.json();
-        if (d.success) showToast(`FILE SECURED: ${d.filename}`);
-        else showToast('ERR: COMPILATION FAILED');
+        if (d.success) {
+          showToast(`FILE SECURED: ${d.filename}`);
+          if (box) {
+            box.innerHTML = `
+              <div style="border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <span style="color: #22c55e;">✔ Lettre sauvegardée sur le Bureau : <code>${esc(d.filename)}</code></span>
+                ${d.download_url ? `<a href="${d.download_url}" target="_blank" class="btn" style="text-decoration: none;">📥 TÉLÉCHARGER LE PDF</a>` : ''}
+              </div>
+            `;
+          }
+        } else {
+          showToast('ERR: COMPILATION FAILED');
+          if (box) box.innerHTML = `<div style="color: var(--color-hot);">⚠️ Erreur : ${esc(d.detail || 'Échec')}</div>`;
+        }
       } catch (e) { showToast('ERR: FATAL EXCEPTION'); }
     }
 
