@@ -12,10 +12,10 @@ import re
 import stat
 import sys
 from pathlib import Path
-from typing import MutableMapping
+from typing import Mapping, MutableMapping
 
 
-def home(environ: MutableMapping[str, str] | None = None) -> Path:
+def home(environ: Mapping[str, str] | None = None) -> Path:
     env = os.environ if environ is None else environ
     if env.get("RJH_HOME"):
         return Path(env["RJH_HOME"]).expanduser()
@@ -34,7 +34,7 @@ def env_path(h: Path | None = None) -> Path:
     return (h or home()) / ".env"
 
 
-def db_path(h: Path | None = None, environ: MutableMapping[str, str] | None = None) -> Path:
+def db_path(h: Path | None = None, environ: Mapping[str, str] | None = None) -> Path:
     env = os.environ if environ is None else environ
     return Path(env["RJH_DB"]).expanduser() if env.get("RJH_DB") else (h or home()) / "jobs.db"
 

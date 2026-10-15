@@ -1,9 +1,10 @@
-"""Commande `rjh` : init · doctor · serve · token · paths."""
+"""Commande `rjh` : init · doctor · scan · serve · token · paths."""
 from __future__ import annotations
 
 import argparse
 import importlib
 import importlib.util
+import json
 import os
 import secrets
 import sys
@@ -15,6 +16,8 @@ from . import __version__
 from .doctor import render, run_doctor, to_json, unicode_supported
 from .messages import detect_lang, t
 from .paths import db_path, env_path, home as default_home, load_dotenv, profile_path
+from .profile import ProfileError
+from .scanner import run_scan
 from .wizard import IO, run_wizard
 
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
@@ -46,6 +49,14 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=5070)
     s.add_argument("--app", help=f"module:objet de l'application ASGI (défaut : $RJH_APP ou {DEFAULT_APP})")
+
+    sc = sub.add_parser("scan", help="collecte, pré-trie et analyse les nouvelles offres")
+    sc.add_argument("--max-jobs", type=int, help="nombre maximal d'offres à évaluer (défaut : llm.max_jobs_per_run)")
+    sc.add_argument("--manual", action="store_true", help="force la création de tickets Mode Manuel (copier-coller)")
+    sc.add_argument("--no-notify", action="store_true", help="désactive les alertes Discord et le digest Markdown")
+    sc.add_argument("--dry-run", action="store_true", help="collecte et pré-trie sans appeler le LLM ni écrire en base")
+    sc.add_argument("--source", action="append", dest="sources", help="limite la collecte à cette source (répétable)")
+    sc.add_argument("--json", action="store_true", help="sortie JSON du rapport de scan")
 
     sub.add_parser("token", help="génère un jeton d'accès aléatoire pour RJH_TOKEN")
     sub.add_parser("paths", help="affiche où sont rangés vos fichiers")
@@ -112,6 +123,32 @@ def cmd_serve(args, out: Callable[[str], None], lang: str, home: Path, env: Muta
     return 0
 
 
+def cmd_scan(args, out: Callable[[str], None], lang: str, home: Path, env: MutableMapping[str, str],
+             http_factory=None) -> int:
+    if not profile_path(home).exists():
+        out(t(lang, "s_noprofile", path=profile_path(home)))
+        return 2
+    try:
+        report = run_scan(
+            home,
+            lang=lang,
+            max_jobs=args.max_jobs,
+            manual_override=args.manual,
+            notify=not args.no_notify,
+            dry_run=args.dry_run,
+            sources=args.sources,
+            environ=env,
+            http=http_factory() if http_factory else None,
+            out=(lambda _m: None) if args.json else out,
+        )
+    except ProfileError as e:
+        out(t(lang, "d_profile_bad", err=e))
+        return 2
+    if args.json:
+        out(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+    return 0
+
+
 def _importable(module: str) -> bool:
     try:
         return importlib.util.find_spec(module) is not None
@@ -137,6 +174,8 @@ def main(argv: Sequence[str] | None = None, *, io: IO | None = None, environ: Mu
         return cmd_doctor(args, io.out, lang, home, env, http_factory)
     if args.cmd == "serve":
         return cmd_serve(args, io.out, lang, home, env, runner)
+    if args.cmd == "scan":
+        return cmd_scan(args, io.out, lang, home, env, http_factory)
     if args.cmd == "token":
         io.out(secrets.token_urlsafe(32))
         return 0

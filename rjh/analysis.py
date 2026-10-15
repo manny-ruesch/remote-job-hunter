@@ -11,6 +11,7 @@ Deux étapes, comme l'ancien pipeline mais séparées pour économiser des token
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -209,6 +210,43 @@ class DossierResult:
     pitch: str
     cold_message: str
     questions: list[str]
+    company: str = ""
+    title: str = ""
+
+    @property
+    def tailored_pitch(self) -> str:
+        return self.pitch
+
+    @property
+    def proof_of_work(self) -> str:
+        diag = self.hook or f"Structuration et automatisation des flux pour {self.title or 'ce poste'}."
+        steps = "\n".join(f"{idx}. {q}" for idx, q in enumerate(self.questions, 1)) or (
+            "1. Ingestion & validation des webhooks/API.\n"
+            "2. Orchestration & traitement automatisé avec garde-fous.\n"
+            "3. Synchronisation CRM & monitoring temps-réel."
+        )
+        mermaid = (
+            "graph LR\n"
+            "  A[Flux Entrant / API] --> B[Orchestrateur & Validation]\n"
+            "  B --> C[Traitement IA / Règles Métier]\n"
+            "  C --> D[Sync CRM & Alerting]"
+        )
+        return json.dumps({
+            "problem_diagnosis": diag,
+            "solution_architecture": steps,
+            "mermaid_diagram": mermaid,
+        }, ensure_ascii=False)
+
+    @property
+    def cold_outreach(self) -> str:
+        import urllib.parse
+        q = urllib.parse.quote_plus(f'site:linkedin.com/in "{self.company}" "Head of" OR "VP" OR "CTO"') if self.company else ""
+        return json.dumps({
+            "target_role": "Head of Engineering / VP Operations / CTO",
+            "subject": f"Candidature & Architecture — {self.title or 'Automation'}",
+            "dm_text": self.cold_message,
+            "linkedin_search_url": f"https://www.google.com/search?q={q}" if q else "",
+        }, ensure_ascii=False)
 
 
 def _to_float(v: Any) -> float | None:

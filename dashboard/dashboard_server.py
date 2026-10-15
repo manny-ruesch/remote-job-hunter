@@ -122,7 +122,7 @@ def is_hunter_running() -> tuple[bool, Optional[int]]:
     for p in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
             cmd = " ".join(p.info["cmdline"] or [])
-            if "run_hunter.py" in cmd and "python" in p.info["name"].lower():
+            if ("run_hunter.py" in cmd or ("rjh" in cmd and "scan" in cmd)) and "python" in p.info["name"].lower():
                 return True, p.info["pid"]
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
