@@ -76,9 +76,14 @@ A typo such as `seniorty` is rejected with a suggestion, never silently ignored.
 | **Remotive** (`remotive`) | by keyword | none | yes | remote jobs, tech and non-tech | ✅ built in |
 | **Adzuna** (`adzuna`) | by keyword | free key | no | on-site and remote, many countries | ✅ built in |
 | **Greenhouse** (`greenhouse`) | company boards | none | no | following specific employers | ✅ built in |
+| **Ashby** (`ashby`) | company boards | none | no | AI scaleups, modern SaaS & PMEs | ✅ built in |
+| **Lever** (`lever`) | company boards | none | no | scaleups & direct ATS boards | ✅ built in |
+| **Welcome to the Jungle** (`wttj`) | by keyword | none | no | French & European scaleups | ✅ built in |
+| **We Work Remotely** (`wwr`) | RSS feeds | none | yes | global remote programming & ops | ✅ built in |
+| **Jobicy** (`jobicy`) | JSON feed | none | yes | curated remote opportunities | ✅ built in |
+| **Hacker News** (`hn`) | founder thread | none | no | YC startups & founder-direct roles | ✅ built in |
 | Your own | plugin | any | any | anything with an API or a feed | 🧩 [~30 lines](docs/ADD_A_SOURCE.md) |
-| Lever, Ashby, We Work Remotely, Hacker News… | | | | | 🗓️ wanted: good first issues |
-| LinkedIn, Welcome to the Jungle scrapers | stealth | none | no | | ⚠️ not included: opt-in only, check each site's terms |
+| LinkedIn scrapers | stealth | none | no | | ⚠️ not included: opt-in only, check each site's terms |
 
 One source breaking never stops the others, and `rjh doctor` tells you which one and why.
 

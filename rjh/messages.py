@@ -107,6 +107,14 @@ MSG: dict[str, dict[str, str]] = {
     "s_noapp": {"fr": "Le Command Center ({app}) est introuvable.\nIndiquez l'application avec --app module:objet (ou la variable RJH_APP).", "en": "The Command Center ({app}) was not found.\nPass the application with --app module:object (or the RJH_APP variable)."},
     "s_noserver": {"fr": "uvicorn n'est pas installé : réinstallez avec 'pipx install --force remote-job-hunter'.", "en": "uvicorn is not installed: reinstall with 'pipx install --force remote-job-hunter'."},
     "s_start": {"fr": "Command Center sur http://{host}:{port}", "en": "Command Center at http://{host}:{port}"},
+    # ---- scan
+    "sc_start": {"fr": "rjh scan — collecte sur {n_sources} source(s) (seuil HOT : {hot}/10)", "en": "rjh scan — polling {n_sources} source(s) (HOT threshold: {hot}/10)"},
+    "sc_collected": {"fr": "  Collectées : {collected} | Nouvelles : {unseen} | Pré-triées : {viable} | Retenues : {selected}", "en": "  Collected: {collected} | Unseen: {unseen} | Viable: {viable} | Selected: {selected}"},
+    "sc_nothing": {"fr": "Aucune nouvelle offre à évaluer.", "en": "No new job offers to evaluate."},
+    "sc_fallback_manual": {"fr": "  ! Clé {var} absente pour {provider} → bascule automatique vers le Mode Manuel (copier-coller).", "en": "  ! Missing {var} for {provider} → automatic fallback to Manual Mode (copy-paste)."},
+    "sc_manual_mode": {"fr": "  Mode Manuel actif : création des lots à copier-coller…", "en": "  Manual Mode active: creating copy-paste batches…"},
+    "sc_tickets_created": {"fr": "  ✔ {n} ticket(s) créé(s) ({ids}) — ouvrez le Command Center (rjh serve) pour coller la réponse.", "en": "  ✔ {n} ticket(s) created ({ids}) — open the Command Center (rjh serve) to paste the response."},
+    "sc_done": {"fr": "  ✔ Scan terminé : {evaluated} évaluée(s), {hot} HOT, {failed} échec(s).", "en": "  ✔ Scan complete: {evaluated} evaluated, {hot} HOT, {failed} failed."},
 }
 
 
