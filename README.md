@@ -1,5 +1,4 @@
 <p align="center">
-  <!-- TODO: enregistrez ~10 s (toile + araignées + scan + carte HOT), voir docs/ASSETS.md. URL ABSOLUE : PyPI n'affiche pas les images relatives. -->
   <img src="https://raw.githubusercontent.com/manny-ruesch/remote-job-hunter/main/docs/assets/noir-webling-demo.gif" width="760" alt="Noir Webling crawling its web while a scan runs, then a HOT match drops in">
 </p>
 
