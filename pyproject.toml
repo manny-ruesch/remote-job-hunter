@@ -30,13 +30,14 @@ dependencies = [
   "PyYAML>=6.0",
   "fastapi>=0.110",
   "uvicorn>=0.29",
+  "pypdf>=4.0",
 ]
 
 [project.optional-dependencies]
 # Fonctions optionnelles et lourdes : jamais installées par défaut.
 autofill = ["playwright>=1.40"]          # pré-remplissage de formulaires (vous validez toujours l'envoi)
 stealth = ["scrapling>=0.4.15"]          # scrapers furtifs (LinkedIn…) : désactivés par défaut, voir les CGU des sites
-dev = ["build", "twine", "ruff"]
+dev = ["build", "twine", "ruff", "httpx>=0.27"]
 
 [project.scripts]
 rjh = "rjh.cli:main"
