@@ -571,7 +571,7 @@ def collect_all_jobs() -> list[dict[str, Any]]:
                 pass
             
     # 5. LinkedIn Remote Guest Search (Full-time + Part-time / Contract)
-    print(f"\n📡 Polling LinkedIn Remote (Full-time & Part-time)...")
+    print("\n📡 Polling LinkedIn Remote (Full-time & Part-time)...")
     for q in ["n8n", "AI Automation Engineer", "Automation"]:
         li_jobs = fetch_linkedin_guest_jobs(q, "Europe")
         if li_jobs:
@@ -584,28 +584,28 @@ def collect_all_jobs() -> list[dict[str, Any]]:
             all_jobs.extend(li_pt)
             
     # 6. Welcome to the Jungle (French & European Scaleups / PMEs)
-    print(f"\n📡 Polling Welcome to the Jungle (Full Remote)...")
+    print("\n📡 Polling Welcome to the Jungle (Full Remote)...")
     wttj_jobs = fetch_wttj_jobs()
     if wttj_jobs:
         print(f"  ✓ WTTJ        : {len(wttj_jobs)} remote matching jobs (Full-time & Freelance)")
         all_jobs.extend(wttj_jobs)
         
     # 7. We Work Remotely (Global Remote Community)
-    print(f"\n📡 Polling We Work Remotely (RSS)...")
+    print("\n📡 Polling We Work Remotely (RSS)...")
     wwr_jobs = fetch_wwr_jobs()
     if wwr_jobs:
         print(f"  ✓ WWR         : {len(wwr_jobs)} remote matching jobs")
         all_jobs.extend(wwr_jobs)
         
     # 8. Remotive (Curated Remote Tech Jobs)
-    print(f"\n📡 Polling Remotive API...")
+    print("\n📡 Polling Remotive API...")
     remotive_jobs = fetch_remotive_jobs()
     if remotive_jobs:
         print(f"  ✓ Remotive    : {len(remotive_jobs)} remote matching jobs")
         all_jobs.extend(remotive_jobs)
         
     # 9. Jobicy (Remote Engineering & Operations)
-    print(f"\n📡 Polling Jobicy API...")
+    print("\n📡 Polling Jobicy API...")
     jobicy_jobs = fetch_jobicy_jobs()
     if jobicy_jobs:
         print(f"  ✓ Jobicy      : {len(jobicy_jobs)} remote matching jobs")

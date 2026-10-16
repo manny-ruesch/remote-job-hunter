@@ -12,7 +12,6 @@ import json
 import os
 import sqlite3
 import sys
-import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path

@@ -2,7 +2,7 @@ import json
 import time
 import urllib.request
 import urllib.error
-from typing import Optional, Any
+from typing import Any
 from config import GOOGLE_API_KEY, GEMINI_MODEL, APPLICANT
 
 SYSTEM_PROMPT = f"""You are an elite Tech Career Agent representing Manny Ruesch.

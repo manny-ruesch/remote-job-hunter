@@ -2,12 +2,15 @@ import os
 import sys
 import json
 import hmac
-import time
 import subprocess
 from pathlib import Path
 from typing import Optional, Any
 
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -176,6 +179,8 @@ if not STATIC_DIR.exists():
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 def is_hunter_running() -> tuple[bool, Optional[int]]:
+    if psutil is None:
+        return False, None
     for p in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
             cmd = " ".join(p.info["cmdline"] or [])
@@ -328,7 +333,7 @@ async def copy_pitch(job_id: str):
     try:
         p = subprocess.Popen(["clip.exe"], stdin=subprocess.PIPE, close_fds=True)
         p.communicate(input=pitch.encode("utf-8"))
-    except Exception as e:
+    except Exception:
         pass
         
     return {"success": True, "pitch": pitch}
