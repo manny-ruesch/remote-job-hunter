@@ -1305,7 +1305,7 @@
             </button>
           </div>
 
-          <input type="text" class="search-input" id="search-box" placeholder="Filtrer par entreprise, poste, techno... (/)" oninput="handleSearch()">
+          <input type="text" class="search-input" id="search-box" placeholder="Filtrer par entreprise, métier, compétence, ville... (/)" oninput="handleSearch()">
         </div>
       </div>
     </div>
@@ -1412,7 +1412,7 @@
 
       <div class="modal-tabs">
         <div class="modal-tab active" onclick="switchModalTab('pitch', this)">Argumentaire</div>
-        <div class="modal-tab" onclick="switchModalTab('pow', this)">Architecture PoW</div>
+        <div class="modal-tab" onclick="switchModalTab('pow', this)">Plan d'action &amp; PoW</div>
         <div class="modal-tab" onclick="switchModalTab('cold', this)">Approche directe</div>
         <div class="modal-tab" onclick="switchModalTab('cover', this)">CV ATS &amp; Lettre PDF</div>
       </div>
@@ -2400,11 +2400,21 @@
     }
 
     function detectEligibility(loc, desc) {
-      const blob = (loc + " " + (desc || "")).toLowerCase();
+      const locLower = (loc || "").toLowerCase();
+      const blob = (locLower + " " + (desc || "")).toLowerCase();
       if (blob.includes("us only") || blob.includes("must reside in the united states") || blob.includes("usa only")) {
         return { label: "US restreint", cls: "eligibility-us" };
       }
-      if (blob.includes("europe") || blob.includes("emea") || blob.includes("france") || blob.includes("germany") || blob.includes("berlin") || blob.includes("uk") || blob.includes("paris")) {
+      const isHybrid = blob.includes("hybrid") || blob.includes("hybride") || blob.includes("télétravail partiel");
+      const isOnsite = blob.includes("on-site") || blob.includes("onsite") || blob.includes("sur site") || blob.includes("présentiel");
+      const isEu = blob.includes("europe") || blob.includes("emea") || blob.includes("france") || blob.includes("germany") || blob.includes("berlin") || blob.includes("uk") || blob.includes("paris") || blob.includes("lyon");
+      if (isOnsite) {
+        return { label: isEu ? "Sur site · Europe" : "Sur site", cls: "eligibility-eu" };
+      }
+      if (isHybrid) {
+        return { label: isEu ? "Hybride · Europe" : "Hybride", cls: "eligibility-eu" };
+      }
+      if (isEu) {
         return { label: "Europe", cls: "eligibility-eu" };
       }
       return { label: "Global", cls: "eligibility-anywhere" };

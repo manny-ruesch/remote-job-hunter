@@ -268,13 +268,26 @@ def extract_job_keywords(job: dict[str, Any]) -> list[str]:
             seen_lower.add(clean.lower())
             matched.append(clean)
 
-    # 2. Scan job corpus against known ATS canonical keywords
+    # 2. Scan job corpus against known ATS canonical keywords + active candidate profile skills (any domain)
     for needle, label in KNOWN_ATS_KEYWORDS:
         if re.search(r"\b" + re.escape(needle) + r"\b", corpus):
             if label.lower() not in seen_lower and needle not in seen_lower:
                 seen_lower.add(label.lower())
                 seen_lower.add(needle)
                 matched.append(label)
+
+    try:
+        import cv_profiler
+        active_prof = cv_profiler.get_active_profile() or {}
+        extra_skills = list(active_prof.get("core_stack") or []) + list(active_prof.get("positive_keywords") or [])
+        for sk in extra_skills:
+            s_clean = str(sk).strip()
+            if 1 < len(s_clean) <= 36 and s_clean.lower() not in seen_lower:
+                if re.search(r"\b" + re.escape(s_clean.lower()) + r"\b", corpus):
+                    seen_lower.add(s_clean.lower())
+                    matched.append(s_clean)
+    except Exception:
+        pass
 
     if not matched:
         matched = ["n8n", "Python", "HubSpot CRM", "REST APIs", "Webhooks", "LLM Pipelines", "PostgreSQL"]

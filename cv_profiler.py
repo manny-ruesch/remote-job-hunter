@@ -1,33 +1,104 @@
 import json
+import re
 import urllib.request
 from pathlib import Path
 from typing import Any
 import pypdf
+import yaml
 import config
 
 PROFILE_PATH = Path(__file__).resolve().parent / "candidate_profile.json"
+YAML_PROFILE_PATH = Path(__file__).resolve().parent / "profile.yaml"
 
-PROFILER_SYSTEM_PROMPT = """You are an expert technical career assessor. 
-Your goal is to parse a candidate's resume/CV text and extract an exhaustive, structured profile for an autonomous job hunting agent.
+PROFILER_SYSTEM_PROMPT = """You are an expert universal career advisor and resume parser across ALL industries (healthcare, finance, accounting, sales, marketing, HR, logistics, education, hospitality, legal, operations, and software/engineering).
+Your goal is to parse a candidate's resume/CV text and extract an exhaustive, structured profile for an autonomous job hunting assistant.
 You must return a valid JSON object matching this schema:
 {
   "name": "Candidate Full Name",
-  "target_role": "Target Job Title",
-  "domain": "Domain Name",
-  "location": "Location / Timezone",
+  "target_role": "Target Job Title (in the resume's primary language)",
+  "domain": "Industry / Domain Name (e.g. Healthcare, Accounting & Finance, Sales, Operations, Software Engineering)",
+  "location": "City, Country or Remote / Timezone",
+  "work_mode": "preferred | required | any (use 'any' for on-site roles like nursing/retail/hospitality, 'preferred' for hybrid/office, 'required' for 100% remote)",
   "email": "Email if found",
   "phone": "Phone if found",
   "linkedin": "LinkedIn URL if found",
   "portfolio": "Portfolio/Website if found",
-  "core_stack": ["tool1", "tool2", "tool3"],
+  "core_stack": ["skill_or_certification_1", "skill_or_tool_2", "skill_3"],
   "positive_keywords": ["keyword1", "keyword2", "keyword3"],
-  "negative_keywords": ["unwanted_tech1", "unwanted_role1"],
-  "experience_summary": "Two sentences highlighting measurable achievements and technical impact.",
-  "key_metrics": "Key metric summary",
+  "negative_keywords": ["unwanted_domain_1", "unwanted_role_1"],
+  "experience_summary": "Two sentences highlighting measurable achievements and professional impact.",
+  "key_metrics": "Key measurable achievements or qualifications summary",
   "languages": "Languages spoken"
 }
-Ensure keywords are lower-case, concise, and production-relevant.
+Ensure keywords are lower-case, concise, and relevant to the candidate's actual profession.
 """
+
+
+def profile_cv_heuristic(cv_text: str) -> dict[str, Any]:
+    """Repli déterministe hors-ligne (Zero-API-Key) pour extraire le profil de n'importe quel CV PDF."""
+    lines = [ln.strip() for ln in cv_text.splitlines() if ln.strip()]
+    name = lines[0][:60] if lines else "Candidat"
+    target_role = lines[1][:80] if len(lines) > 1 else "Professionnel"
+
+    email_m = re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", cv_text)
+    phone_m = re.search(r"(\+?\d[\d\s().-]{7,}\d)", cv_text)
+    linkedin_m = re.search(r"(linkedin\.com/in/[A-Za-z0-9_-]+)", cv_text, re.I)
+
+    # Extract frequent capitalized or domain terms as skills
+    words = re.findall(r"\b[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9+#.-]{2,24}\b", cv_text)
+    stop = {"les", "des", "dans", "pour", "avec", "sur", "une", "par", "aux", "est", "sont", "the", "and", "for", "with", "from", "that", "this", "experience", "formation", "education", "skills", "competences"}
+    seen: list[str] = []
+    for w in words:
+        wl = w.lower()
+        if wl not in stop and not wl.isdigit() and wl not in [s.lower() for s in seen]:
+            seen.append(w)
+        if len(seen) >= 12:
+            break
+
+    profile = {
+        "name": name,
+        "target_role": target_role,
+        "domain": "Tous secteurs",
+        "location": "France / Europe",
+        "work_mode": "preferred",
+        "email": email_m.group(0) if email_m else "",
+        "phone": phone_m.group(0).strip() if phone_m else "",
+        "linkedin": linkedin_m.group(0) if linkedin_m else "",
+        "portfolio": "",
+        "core_stack": seen[:8] or ["Gestion de projet", "Communication", "Analyse"],
+        "positive_keywords": [s.lower() for s in seen[:10]],
+        "negative_keywords": [],
+        "experience_summary": " ".join(lines[2:5])[:280] if len(lines) > 2 else "",
+        "key_metrics": "",
+        "languages": "Français, Anglais",
+    }
+    try:
+        with open(PROFILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(profile, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+    return profile
+
+
+def sync_profile_yaml(profile: dict[str, Any], yaml_path: Path | None = None) -> None:
+    """Synchronise le profil extrait du CV avec profile.yaml uniquement si le candidat change de métier."""
+    target = yaml_path or YAML_PROFILE_PATH
+    if not target.exists():
+        return
+    try:
+        data = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+        if not isinstance(data, dict):
+            return
+        cand = data.setdefault("candidate", {})
+        if profile.get("name"):
+            cand["name"] = profile["name"]
+        if profile.get("target_role"):
+            cand["headline"] = profile["target_role"]
+        if profile.get("experience_summary"):
+            cand["summary"] = profile["experience_summary"]
+        target.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    except Exception:
+        pass
 
 def extract_pdf_text(pdf_path: Path) -> str:
     if not pdf_path.exists():
