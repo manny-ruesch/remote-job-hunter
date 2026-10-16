@@ -2,7 +2,6 @@ import sys
 import subprocess
 import json
 from db import get_conn
-from config import APPLICANT
 
 def copy_to_clipboard(text: str):
     try:

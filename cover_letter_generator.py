@@ -5,7 +5,6 @@ import json
 import urllib.request
 import subprocess
 from pathlib import Path
-from typing import Optional, Any
 
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR))

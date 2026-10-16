@@ -17,7 +17,8 @@ from typing import Mapping
 from ..http import HttpClient
 from ..models import Job
 from ..profile import Profile
-from .base import (BaseJobSource, BoardSource, KeywordSource, Prefilter, RateLimit, SearchQuery,
+from .base import (BaseJobSource, BoardSource as BoardSource, KeywordSource as KeywordSource,
+                   Prefilter, RateLimit as RateLimit, SearchQuery as SearchQuery,
                    SourceConfigError, SourceResult)
 
 _REGISTRY: dict[str, type[BaseJobSource]] = {}

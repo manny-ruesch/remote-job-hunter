@@ -141,7 +141,7 @@ def send_discord_alert(job: dict[str, Any]) -> bool:
             with urllib.request.urlopen(req, timeout=8) as r:
                 if r.status in (200, 204):
                     return True
-        except Exception as e:
+        except Exception:
             # Fall back to webhook below
             pass
 

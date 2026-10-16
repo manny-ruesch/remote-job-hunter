@@ -1,4 +1,3 @@
-import io as _io
 import json
 import os
 import sys

@@ -1,7 +1,5 @@
-import os
 import re
 import sys
-import time
 import subprocess
 import urllib.request
 from pathlib import Path
@@ -63,7 +61,6 @@ def run_tunnel():
                         print(f"✅ Tunnel Cloudflare actif : {tunnel_url}")
                         with open(TUNNEL_URL_FILE, "w", encoding="utf-8") as f:
                             f.write(tunnel_url)
-                        import json
                         notify_discord(tunnel_url)
                         
         proc.wait()

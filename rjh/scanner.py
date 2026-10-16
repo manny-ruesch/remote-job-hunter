@@ -23,13 +23,13 @@ from typing import Any, Callable, Mapping
 from .analysis import Analyzer, DossierResult, TriageResult
 from .heuristic import ProfileScorer, ScoreDetail
 from .http import HttpClient
-from .llm import LLMAuthError, LLMConfig, LLMError, LLMProvider, ManualProvider, ModelUnavailableError, create_provider
+from .llm import LLMAuthError, LLMConfig, LLMProvider, ManualProvider, ModelUnavailableError, create_provider
 from .manual import ManualService, ManualTicket, SqliteTicketStore
 from .messages import t
 from .models import Job
-from .paths import db_path, env_path, profile_path
-from .profile import Profile, load_profile
-from .sources import SourceResult, collect
+from .paths import db_path, profile_path
+from .profile import load_profile
+from .sources import collect
 
 
 _SOURCE_LABELS = {
