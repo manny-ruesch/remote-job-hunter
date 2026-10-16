@@ -18,11 +18,12 @@
     :root, [data-theme="dark"] {
       --bg: #09090B;
       --bg-subtle: #0D0D10;
-      --card: #111114;
-      --card-hover: #16161A;
-      --surface-muted: rgba(255, 255, 255, 0.035);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-hover: rgba(255, 255, 255, 0.22);
+      --card: rgba(17, 17, 20, 0.78);
+      --card-solid: #111114;
+      --card-hover: rgba(24, 24, 29, 0.88);
+      --surface-muted: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-hover: rgba(255, 255, 255, 0.24);
       --text: #F4F4F5;
       --text-muted: #8E8E93;
       --accent: #F4F4F5;
@@ -42,10 +43,11 @@
     [data-theme="light"] {
       --bg: #FAF8F5;
       --bg-subtle: #F3EFEA;
-      --card: #FFFFFF;
-      --card-hover: #F5F2EC;
-      --surface-muted: rgba(26, 23, 21, 0.04);
-      --border: rgba(26, 23, 21, 0.10);
+      --card: rgba(255, 255, 255, 0.82);
+      --card-solid: #FFFFFF;
+      --card-hover: rgba(245, 242, 236, 0.92);
+      --surface-muted: rgba(26, 23, 21, 0.045);
+      --border: rgba(26, 23, 21, 0.11);
       --border-hover: rgba(26, 23, 21, 0.28);
       --text: #1A1715;
       --text-muted: #736B63;
@@ -285,44 +287,74 @@
       gap: 16px;
     }
 
-    /* Collapsible / Drag-Activated CV Dropzone */
+    /* Compact Interactive CV Dropzone Banner (Always Visible, Expands on Drag/Upload) */
     .dropzone-container {
       border: 1px dashed var(--border-hover);
       border-radius: 8px;
       background: var(--card);
-      padding: 20px 24px;
-      text-align: center;
-      transition: border-color 0.2s ease, background 0.2s ease;
+      backdrop-filter: blur(6px);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: border-color 0.2s ease, background 0.2s ease, padding 0.2s ease;
       position: relative;
       overflow: hidden;
       cursor: pointer;
-      display: none;
     }
-    .dropzone-container.visible,
+    .dropzone-container.expanded,
     .dropzone-container.dragover {
-      display: block;
-    }
-    .dropzone-container:hover,
-    .dropzone-container.dragover {
+      padding: 22px 24px;
       border-color: var(--brand-red);
       background: var(--card-hover);
     }
+    .dropzone-container:hover {
+      border-color: var(--brand-red);
+      background: var(--card-hover);
+    }
+    .dropzone-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .dropzone-icon-box {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--brand-red);
+    }
+    .dropzone-icon-box svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      fill: none;
+    }
     .dropzone-title {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--text);
-      margin-bottom: 3px;
+      line-height: 1.3;
     }
     .dropzone-sub {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-muted);
+      line-height: 1.35;
     }
     .ai-status {
       font-size: 12px;
       font-weight: 500;
       color: var(--text);
-      margin-top: 10px;
       display: none;
+      margin-left: auto;
     }
 
     #spider-pet {
@@ -1102,12 +1134,21 @@
       <div class="brand-avatar" id="logo-pet" title="Noir Webling — Déclencher une onde radar">
         <img src="/static/pet_anim_192.gif" style="width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated;" alt="Noir Webling">
       </div>
-      <div class="brand-identity">
+      <div class="brand-identity" id="system-health-bar">
         <span class="brand-title">Remote Job Hunter</span>
         <span class="header-divider"></span>
-        <span class="profile-pill">
+        <span class="profile-pill" title="Profil candidat actif">
           <span class="status-dot indigo"></span>
           <span id="health-profile">Revenue Operations &amp; Automation</span>
+        </span>
+        <span class="header-divider"></span>
+        <span class="profile-pill" title="Moteur d'évaluation">
+          <span class="status-dot emerald"></span>
+          <span id="health-gemini">Gemini actif</span>
+        </span>
+        <span class="header-divider"></span>
+        <span class="profile-pill" title="Sources d'offres configurées">
+          <span id="health-sources" style="font-family: var(--font-mono); font-variant-numeric: tabular-nums;">51 sources</span>
         </span>
         <div id="status-pill" class="status-badge">
           <span class="dot"></span>
@@ -1117,7 +1158,7 @@
     </div>
 
     <div class="header-actions">
-      <button class="btn btn-ghost" onclick="toggleDropzoneBanner()" title="Importer ou mettre à jour votre CV PDF">
+      <button class="btn btn-ghost" onclick="document.getElementById('cv-upload').click()" title="Importer ou mettre à jour votre CV PDF">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         <span>Mettre à jour le CV</span>
       </button>
@@ -1138,18 +1179,24 @@
   </header>
 
   <div class="container">
-    <!-- Escamotable / Drag-Activated CV Dropzone -->
+    <!-- Compact Interactive CV Dropzone Banner -->
     <div class="dropzone-container" id="dropzone" onclick="document.getElementById('cv-upload').click()">
       <div id="spider-pet">
         <div class="spider-thread"></div>
         <div class="pixel-spider-body"></div>
       </div>
       <input type="file" id="cv-upload" style="display: none" accept="application/pdf" onchange="handleFileUpload(event)">
-      <div id="dropzone-content">
-        <div class="dropzone-title" id="drop-title">Déposez votre CV au format PDF</div>
-        <div class="dropzone-sub" id="drop-sub">Votre profil et les mots-clés de filtrage seront automatiquement recalibrés.</div>
+      <div class="dropzone-left" id="dropzone-content">
+        <div class="dropzone-icon-box">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div>
+          <div class="dropzone-title" id="drop-title">Déposez votre CV au format PDF pour recalibrer le moteur</div>
+          <div class="dropzone-sub" id="drop-sub">Analyse automatique du profil et synchronisation des sources d'offres</div>
+        </div>
       </div>
       <div class="ai-status" id="ai-status"></div>
+      <button class="btn" type="button" style="height: 28px; font-size: 12px;" onclick="event.stopPropagation(); document.getElementById('cv-upload').click()">Sélectionner un PDF</button>
     </div>
 
     <!-- Compact Toolbar: Inline Metrics + Filters + Segmented View Control + Search -->
@@ -1767,19 +1814,19 @@
           }
         }
 
-        // 2. Draw Spokes (40% reduced opacity -> subtle horology filigree)
-        ctxBg.lineWidth = 0.85;
+        // 2. Draw Spokes (Clearly visible architectural spider web)
+        ctxBg.lineWidth = 1.05;
         for (let s = 0; s < SPOKES; s++) {
           ctxBg.beginPath();
           ctxBg.moveTo(origin.x, origin.y);
           for (let r = 0; r < RINGS; r++) {
             ctxBg.lineTo(nodes[s][r].x, nodes[s][r].y);
           }
-          ctxBg.strokeStyle = `rgba(${webRgb}, ${isLight ? 0.042 : 0.052})`;
+          ctxBg.strokeStyle = isLight ? 'rgba(153, 27, 27, 0.13)' : 'rgba(244, 244, 245, 0.13)';
           ctxBg.stroke();
         }
 
-        // 3. Traveling Light Pulses along Spokes (subtle, low blur)
+        // 3. Traveling Light Pulses along Spokes
         if (!prefersReducedMotion) {
           for (let i = pulses.length - 1; i >= 0; i--) {
             const pu = pulses[i];
@@ -1793,16 +1840,20 @@
             const b = nodes[pu.spoke][r1];
             const px = a.x + (b.x - a.x) * k;
             const py = a.y + (b.y - a.y) * k;
-            const pulseAlpha = Math.sin(pu.p * Math.PI) * 0.55;
+            const pulseAlpha = Math.sin(pu.p * Math.PI) * 0.85;
 
             ctxBg.beginPath();
-            ctxBg.arc(px, py, 1.8, 0, Math.PI * 2);
+            ctxBg.arc(px, py, 2.3, 0, Math.PI * 2);
             ctxBg.fillStyle = `rgba(${accentRgb}, ${pulseAlpha})`;
+            ctxBg.shadowBlur = 5;
+            ctxBg.shadowColor = `rgba(${accentRgb}, 0.55)`;
             ctxBg.fill();
+            ctxBg.shadowBlur = 0;
           }
         }
 
-        // 4. Draw Rings (40% reduced opacity)
+        // 4. Draw Rings & Intersection Micro-Nodes
+        ctxBg.lineWidth = 1.0;
         for (let r = 0; r < RINGS; r++) {
           ctxBg.beginPath();
           for (let s = 0; s < SPOKES; s++) {
@@ -1816,9 +1867,18 @@
             const ctrlY = origin.y + (midY - origin.y) * sag;
             ctxBg.quadraticCurveTo(ctrlX, ctrlY, next.x, next.y);
           }
-          const ringAlpha = (isLight ? 0.032 : 0.038) + (r / RINGS) * (isLight ? 0.042 : 0.048);
-          ctxBg.strokeStyle = `rgba(${webRgb}, ${ringAlpha})`;
+          const ringAlpha = (isLight ? 0.08 : 0.09) + (r / RINGS) * (isLight ? 0.08 : 0.09);
+          ctxBg.strokeStyle = isLight ? `rgba(26, 23, 21, ${ringAlpha})` : `rgba(244, 244, 245, ${ringAlpha})`;
           ctxBg.stroke();
+
+          // Subtle anchor nodes at intersections
+          for (let s = 0; s < SPOKES; s++) {
+            const pt = nodes[s][r];
+            ctxBg.beginPath();
+            ctxBg.arc(pt.x, pt.y, 1.35, 0, Math.PI * 2);
+            ctxBg.fillStyle = isLight ? `rgba(153, 27, 27, ${ringAlpha * 1.35})` : `rgba(244, 244, 245, ${ringAlpha * 1.35})`;
+            ctxBg.fill();
+          }
         }
 
         // 4b. Draw Living Spiders
@@ -2207,6 +2267,10 @@
           const d = await res.json();
           const pEl = document.getElementById('health-profile');
           if (pEl && d.active_profile) pEl.textContent = d.active_profile;
+          const gEl = document.getElementById('health-gemini');
+          if (gEl) gEl.textContent = (d.gemini_status === 'operational' || d.gemini_ready) ? 'Gemini actif' : 'Mode Manuel';
+          const sEl = document.getElementById('health-sources');
+          if (sEl && d.sources_count) sEl.textContent = `${d.sources_count} sources`;
         }
       } catch (e) {}
     }
@@ -2240,7 +2304,9 @@
       } catch (e) { console.error('Stats error:', e); }
     }
 
+    let _jobsReqSeq = 0;
     async function loadJobs() {
+      const seq = ++_jobsReqSeq;
       try {
         let url = `/api/jobs?limit=500`;
         if (currentFilter === 'hot') url += '&min_score=7.5';
@@ -2251,6 +2317,7 @@
 
         const res = await fetch(url);
         let jobs = await res.json();
+        if (seq !== _jobsReqSeq) return;
         if (currentFilter === 'part_time') jobs = jobs.filter(j => j.job_type === 'part_time' || j.job_type === 'contract');
 
         renderJobs(jobs);
@@ -2511,6 +2578,9 @@
 
     function selectJobByIndex(idx) {
       selectedJobIndex = idx;
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+        document.activeElement.blur();
+      }
       document.querySelectorAll('.job-card').forEach((c, i) => {
         if (i === idx) c.classList.add('keyboard-selected');
         else c.classList.remove('keyboard-selected');
@@ -2656,28 +2726,34 @@
         const d = await res.json();
         if (d.success) {
           showToast(`CV ATS généré : ${d.filename}`);
-          if (box && d.ats_audit) {
-            const a = d.ats_audit;
-            const checksHtml = (a.checks || []).map(c =>
-              `<div style="display: flex; align-items: center; gap: 6px; color: ${c.ok ? 'var(--color-emerald)' : 'var(--brand-red)'}; margin-bottom: 3px;">
-                <span class="status-dot ${c.ok ? 'emerald' : 'hot'}"></span>
-                <span>${esc(c.label)}</span>
-              </div>`
-            ).join('');
+          if (box) {
+            const a = d.ats_audit || d;
+            const rawChecks = a.ats_checks || a.checks || [];
+            const checksHtml = rawChecks.map(c => {
+              const ok = typeof c === 'object' ? c.ok !== false : true;
+              const label = typeof c === 'object' ? c.label : String(c);
+              return `<div style="display: flex; align-items: center; gap: 6px; color: ${ok ? 'var(--color-emerald)' : 'var(--brand-red)'}; margin-bottom: 3px;">
+                <span class="status-dot ${ok ? 'emerald' : 'hot'}"></span>
+                <span>${esc(label)}</span>
+              </div>`;
+            }).join('');
             const kwHtml = (a.matched_keywords || []).map(k =>
               `<span class="tech-tag" style="color: var(--text); border-color: var(--border-hover);">${esc(k)}</span>`
             ).join(' ');
+            const scoreVal = a.ats_score ?? 100;
+            const pagesVal = a.page_count ?? 1;
+            const headlineVal = a.tailored_headline || a.headline || '';
             box.innerHTML = `
               <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot emerald"></span>
-                    <span style="color: var(--color-emerald); font-weight: 600; font-family: var(--font-mono);">Score ATS : ${a.ats_score}/100</span>
-                    <span style="color: var(--text-muted);">· ${a.page_count} page A4 · Synchronisé avec le pré-remplissage</span>
+                    <span style="color: var(--color-emerald); font-weight: 600; font-family: var(--font-mono);">Score ATS : ${scoreVal}/100</span>
+                    <span style="color: var(--text-muted);">· ${pagesVal} page A4 · Synchronisé avec le pré-remplissage</span>
                   </div>
                   <a href="${d.download_url}" target="_blank" class="btn btn-primary">Télécharger ${esc(d.filename)}</a>
                 </div>
-                <div style="margin-bottom: 8px; color: var(--text-muted);">Titre adapté : <strong style="color: var(--text);">${esc(a.headline)}</strong></div>
+                <div style="margin-bottom: 8px; color: var(--text-muted);">Titre adapté : <strong style="color: var(--text);">${esc(headlineVal)}</strong></div>
                 <div style="margin-bottom: 10px;">${checksHtml}</div>
                 <div style="margin-bottom: 6px; color: var(--text-muted); font-size: 11px;">Mots-clés de l'offre injectés et mis en valeur :</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 5px;">${kwHtml}</div>
