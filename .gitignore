@@ -32,5 +32,7 @@ tunnel.log
 
 # Screenshots and archives
 *.png
+!dashboard/static/*.png
+!docs/assets/*.png
 *.zip
 *.tar.gz

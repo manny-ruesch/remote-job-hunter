@@ -68,6 +68,13 @@ search:                                    # a nurse in Lyon                    
 
 A typo such as `seniorty` is rejected with a suggestion, never silently ignored. Every score comes with its reasons.
 
+## 1-Click Tailored ATS CV & Executive Cover Letter (1 Page A4)
+
+For every qualified offer, the Command Center can generate two ready-to-send A4 PDFs directly on your Desktop:
+
+- **100% ATS-Safe Tailored CV (`cv_tailor.py`)**: Strict single-column linear reading flow (compatible with Workday, Greenhouse, Lever, Ashby, and Taleo parsers), *Editorial Warm Luxury* typography (*Newsreader* + *Plus Jakarta Sans* + *Inter*), automatic keyword alignment and bolding from the job description, zero fabricated facts, built-in `100/100` ATS self-audit, and automatic sync with `uploaded_cv.pdf` for 1-click Playwright form pre-filling.
+- **Executive Cover Letter (`cover_letter_generator.py`)**: Tailored to the company's operational challenges and rendered to a clean A4 vector PDF.
+
 ## Supported sources
 
 | Source | Type | API key | Remote only | Good for | Status |
