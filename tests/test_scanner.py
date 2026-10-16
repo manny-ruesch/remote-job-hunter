@@ -366,6 +366,20 @@ class DashboardAuditTest(unittest.TestCase):
         self.assertTrue(audit["linear_order_ok"])
         self.assertGreaterEqual(audit["ats_score"], 85)
 
+    def test_universal_nontech_cv_profiler_offline(self):
+        import cv_profiler
+        nurse_cv = (
+            "Claire Martin\n"
+            "Infirmière Diplômée d'État (IDE) — Urgences & Soins Intensifs\n"
+            "Lyon, France | claire.martin@example.fr | +33 6 99 88 77 66\n"
+            "8 ans d'expérience en service d'urgences hospitalières, triage, pansements complexes et transfusion.\n"
+        )
+        prof = cv_profiler.profile_cv_heuristic(nurse_cv)
+        self.assertEqual(prof["name"], "Claire Martin")
+        self.assertIn("Infirmière", prof["target_role"])
+        self.assertEqual(prof["email"], "claire.martin@example.fr")
+        self.assertTrue(len(prof["core_stack"]) >= 3)
+
 
 if __name__ == "__main__":
     unittest.main()

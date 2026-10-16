@@ -440,7 +440,8 @@ async def upload_cv(file: UploadFile = File(...)):
         
     profile = cv_profiler.profile_cv_with_gemini(text)
     if not profile:
-        raise HTTPException(500, "Erreur lors du profilage IA par Gemini.")
+        profile = cv_profiler.profile_cv_heuristic(text)
+    cv_profiler.sync_profile_yaml(profile)
         
     return {
         "success": True,
