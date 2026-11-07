@@ -89,6 +89,12 @@ def init_jobs_db(path: Path) -> None:
                 gate TEXT,
                 profile_fp TEXT,
                 dedupe_key TEXT,
+                liveness_status TEXT DEFAULT 'unknown',
+                liveness_checked_at TEXT,
+                repost_count INTEGER DEFAULT 0,
+                applied_at TEXT,
+                next_followup_at TEXT,
+                followup_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -103,6 +109,12 @@ def init_jobs_db(path: Path) -> None:
             "gate": "TEXT",
             "profile_fp": "TEXT",
             "dedupe_key": "TEXT",
+            "liveness_status": "TEXT DEFAULT 'unknown'",
+            "liveness_checked_at": "TEXT",
+            "repost_count": "INTEGER DEFAULT 0",
+            "applied_at": "TEXT",
+            "next_followup_at": "TEXT",
+            "followup_count": "INTEGER DEFAULT 0",
         }
         for col, spec in migrations.items():
             if col not in cols:
@@ -110,6 +122,8 @@ def init_jobs_db(path: Path) -> None:
         con.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status_fit ON jobs(status, fit_score);")
         con.execute("CREATE INDEX IF NOT EXISTS idx_jobs_type_fit ON jobs(job_type, fit_score);")
         con.execute("CREATE INDEX IF NOT EXISTS idx_jobs_analysis_status ON jobs(analysis_status);")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_jobs_dedupe_key ON jobs(dedupe_key);")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_jobs_followup ON jobs(status, next_followup_at);")
         con.commit()
     finally:
         con.close()
@@ -124,7 +138,12 @@ def filter_unseen_jobs(db_file: Path, jobs: list[Job]) -> list[Job]:
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(
-            "SELECT id, dedupe_key, url, status, fit_score, analysis_status FROM jobs"
+            """
+            SELECT id, source, dedupe_key, url, status, fit_score, analysis_status,
+                   COALESCE(liveness_status, 'unknown') AS liveness_status,
+                   created_at
+            FROM jobs
+            """
         ).fetchall()
     except sqlite3.Error:
         con.close()
@@ -132,9 +151,13 @@ def filter_unseen_jobs(db_file: Path, jobs: list[Job]) -> list[Job]:
     finally:
         con.close()
 
+    from .liveness import parse_utc, utc_now
+
+    now_dt = utc_now()
     done_ids: set[str] = set()
     done_dedupe: set[str] = set()
     done_urls: set[str] = set()
+    dedupe_meta: dict[str, dict[str, Any]] = {}
     retry_by_key: dict[str, str] = {}
 
     for r in rows:
@@ -144,6 +167,18 @@ def filter_unseen_jobs(db_file: Path, jobs: list[Job]) -> list[Job]:
         a_status = (r["analysis_status"] or "ok").lower()
         status = (r["status"] or "new").lower()
         score = float(r["fit_score"] or 0.0)
+        liveness = (r["liveness_status"] or "unknown").lower()
+        src_base = (r["source"] or "").split("·")[0].strip().lower()
+        created_dt = parse_utc(r["created_at"])
+
+        if dkey:
+            dedupe_meta[dkey] = {
+                "id": jid,
+                "url": curl,
+                "source": src_base,
+                "liveness": liveness,
+                "created_dt": created_dt,
+            }
 
         is_evaluated = (
             a_status == "ok"
@@ -165,14 +200,55 @@ def filter_unseen_jobs(db_file: Path, jobs: list[Job]) -> list[Job]:
                 retry_by_key[curl] = jid
 
     unseen: list[Job] = []
+    repost_updates: list[tuple[str, str]] = []
+    seen_repost_ids: set[str] = set()
+
     for job in jobs:
         curl = _clean_url(job.url)
-        if job.id in done_ids or job.dedupe_key in done_dedupe or (curl and curl in done_urls):
+        if job.id in done_ids or (curl and curl in done_urls):
+            continue
+        if job.dedupe_key in done_dedupe:
+            meta = dedupe_meta.get(job.dedupe_key)
+            if meta and curl and curl != meta["url"]:
+                old_dt = meta.get("created_dt")
+                age_days = ((now_dt - old_dt).total_seconds() / 86400.0) if old_dt else 0.0
+                same_source = (job.source or "").lower() == meta.get("source")
+                is_repost = (
+                    meta.get("liveness") == "expired"
+                    or age_days >= 7.0
+                    or same_source
+                )
+                if is_repost and meta["id"] not in seen_repost_ids:
+                    seen_repost_ids.add(meta["id"])
+                    repost_updates.append((job.url, meta["id"]))
             continue
         existing_id = retry_by_key.get(job.id) or retry_by_key.get(job.dedupe_key) or (retry_by_key.get(curl) if curl else None)
         if existing_id:
             job.extra["db_id"] = existing_id
         unseen.append(job)
+
+    if repost_updates:
+        try:
+            wcon = sqlite3.connect(db_file, timeout=10.0)
+            try:
+                wcon.execute("PRAGMA journal_mode = WAL;")
+                wcon.execute("PRAGMA busy_timeout = 5000;")
+                wcon.executemany(
+                    """
+                    UPDATE jobs
+                    SET repost_count = COALESCE(repost_count, 0) + 1,
+                        url = ?,
+                        liveness_status = 'active'
+                    WHERE id = ?
+                    """,
+                    repost_updates,
+                )
+                wcon.commit()
+            finally:
+                wcon.close()
+        except sqlite3.Error:
+            pass
+
     return unseen
 
 
