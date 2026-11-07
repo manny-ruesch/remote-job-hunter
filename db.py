@@ -54,9 +54,23 @@ def init_db():
         c.execute("ALTER TABLE jobs ADD COLUMN profile_fp TEXT")
     if "dedupe_key" not in cols:
         c.execute("ALTER TABLE jobs ADD COLUMN dedupe_key TEXT")
+    if "liveness_status" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN liveness_status TEXT DEFAULT 'unknown'")
+    if "liveness_checked_at" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN liveness_checked_at TEXT")
+    if "repost_count" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN repost_count INTEGER DEFAULT 0")
+    if "applied_at" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN applied_at TEXT")
+    if "next_followup_at" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN next_followup_at TEXT")
+    if "followup_count" not in cols:
+        c.execute("ALTER TABLE jobs ADD COLUMN followup_count INTEGER DEFAULT 0")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status_fit ON jobs(status, fit_score);")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_type_fit ON jobs(job_type, fit_score);")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_analysis_status ON jobs(analysis_status);")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_dedupe_key ON jobs(dedupe_key);")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_followup ON jobs(status, next_followup_at);")
     conn.commit()
     conn.close()
 
@@ -129,7 +143,23 @@ def get_job_by_id(job_id: str) -> Optional[dict[str, Any]]:
 def update_job_status(job_id: str, status: str):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
+    if status == "applied":
+        from datetime import datetime, timedelta, timezone
+        now_utc = datetime.now(timezone.utc)
+        applied_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        next_iso = (now_utc + timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        c.execute(
+            """
+            UPDATE jobs
+            SET status = ?,
+                applied_at = COALESCE(applied_at, ?),
+                next_followup_at = COALESCE(next_followup_at, ?)
+            WHERE id = ?
+            """,
+            (status, applied_iso, next_iso, job_id),
+        )
+    else:
+        c.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
     conn.commit()
     conn.close()
 

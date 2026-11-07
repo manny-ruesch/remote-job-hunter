@@ -28,6 +28,15 @@ from rjh.profile import load_profile
 from rjh.manual import ManualService, SqliteTicketStore
 from rjh.web.manual_router import make_manual_router
 from rjh.models import Job
+from rjh.liveness import (
+    check_job_liveness,
+    compute_followup_status,
+    detect_reposts_in_db,
+    format_utc,
+    parse_utc,
+    run_liveness_batch,
+    utc_now,
+)
 
 ACTIVE_HOME = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else HUNTER_DIR
 PROFILE_PATH = ACTIVE_HOME / "profile.yaml" if (ACTIVE_HOME / "profile.yaml").exists() else HUNTER_DIR / "profile.yaml"
@@ -274,7 +283,8 @@ async def list_jobs(
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     
-    # Parse proof_of_work & cold_outreach JSON if present
+    # Parse proof_of_work & cold_outreach JSON if present + compute follow-up state
+    now_dt = utc_now()
     for r in rows:
         pow_val = r.get("proof_of_work")
         if pow_val:
@@ -288,6 +298,7 @@ async def list_jobs(
                 r["cold_outreach"] = json.loads(cold_val) if isinstance(cold_val, str) else cold_val
             except Exception:
                 pass
+        r["followup"] = compute_followup_status(r, now=now_dt).to_dict()
                 
     return rows
 
@@ -310,6 +321,7 @@ async def get_job_detail(job_id: str):
             job["cold_outreach"] = json.loads(cold_val) if isinstance(cold_val, str) else cold_val
         except Exception:
             pass
+    job["followup"] = compute_followup_status(job).to_dict()
     return job
 
 @app.post("/api/jobs/{job_id}/status")
@@ -318,7 +330,94 @@ async def update_status(job_id: str, payload: dict[str, str]):
     if not new_status:
         raise HTTPException(status_code=400, detail="Missing status")
     db.update_job_status(job_id, new_status)
-    return {"success": True, "job_id": job_id, "new_status": new_status}
+    updated = db.get_job_by_id(job_id)
+    return {
+        "success": True,
+        "job_id": job_id,
+        "new_status": new_status,
+        "followup": compute_followup_status(updated).to_dict() if updated else None,
+    }
+
+
+@app.post("/api/jobs/{job_id}/check-liveness")
+def check_single_job_liveness(job_id: str):
+    job = db.get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    res = check_job_liveness(job.get("url") or "")
+    conn = db.get_conn()
+    try:
+        conn.execute(
+            "UPDATE jobs SET liveness_status = ?, liveness_checked_at = ? WHERE id = ?",
+            (res.status, res.checked_at, job_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {
+        "success": True,
+        "job_id": job_id,
+        **res.to_dict(),
+    }
+
+
+@app.post("/api/liveness/batch")
+def check_batch_liveness(payload: Optional[dict[str, Any]] = None):
+    body = payload or {}
+    raw_limit = body.get("limit")
+    raw_min_score = body.get("min_score")
+    raw_ttl = body.get("ttl_hours")
+    limit = int(raw_limit) if raw_limit is not None else 15
+    min_score = float(raw_min_score) if raw_min_score is not None else 7.0
+    ttl_hours = int(raw_ttl) if raw_ttl is not None else 6
+    active_db = os.environ.get("RJH_DB") or (
+        os.path.join(os.environ["RJH_HOME"], "jobs.db") if os.environ.get("RJH_HOME") else config.DB_PATH
+    )
+    summary = run_liveness_batch(
+        active_db,
+        limit=limit,
+        min_score=min_score,
+        ttl_hours=ttl_hours,
+    )
+    return {"success": True, **summary}
+
+
+@app.post("/api/jobs/{job_id}/followup-sent")
+def record_followup_sent(job_id: str):
+    from datetime import timedelta
+    job = db.get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    now_dt = utc_now()
+    current_count = int(job.get("followup_count") or 0) + 1
+    current_next = parse_utc(job.get("next_followup_at")) or now_dt
+    anchor = max(now_dt, current_next)
+    next_iso = format_utc(anchor + timedelta(days=7))
+    applied_iso = job.get("applied_at") or format_utc(now_dt)
+
+    conn = db.get_conn()
+    try:
+        conn.execute(
+            """
+            UPDATE jobs
+            SET status = 'applied',
+                applied_at = COALESCE(applied_at, ?),
+                followup_count = ?,
+                next_followup_at = ?
+            WHERE id = ?
+            """,
+            (applied_iso, current_count, next_iso, job_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    updated = db.get_job_by_id(job_id) or job
+    return {
+        "success": True,
+        "job_id": job_id,
+        "followup": compute_followup_status(updated, now=now_dt).to_dict(),
+    }
 
 @app.post("/api/jobs/{job_id}/copy-pitch")
 async def copy_pitch(job_id: str):

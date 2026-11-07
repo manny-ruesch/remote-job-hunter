@@ -1173,6 +1173,10 @@
     </div>
 
     <div class="header-actions">
+      <button class="btn btn-ghost" onclick="triggerLivenessBatch()" title="Vérifier que les offres à haute pertinence sont toujours ouvertes (Anti-Ghost Jobs)">
+        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>Vérifier les offres</span>
+      </button>
       <button class="btn btn-ghost" onclick="document.getElementById('cv-upload').click()" title="Importer ou mettre à jour votre CV PDF">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         <span>Mettre à jour le CV</span>
@@ -2451,6 +2455,7 @@
           typeBadge = `<span class="tech-tag" style="color: var(--color-indigo); border-color: rgba(99, 102, 241, 0.3);">Freelance</span>`;
         }
 
+        const livenessHtml = renderLivenessBadges(j);
         const isSelected = idx === selectedJobIndex;
         const sourceName = (j.source || 'Direct').split('·')[0].trim();
 
@@ -2469,6 +2474,7 @@
                     <span class="eligibility-pill ${elig.cls}"><span class="status-dot"></span>${elig.label}</span>
                     <span>${esc(j.location || 'Remote')}</span>
                     ${typeBadge}
+                    ${livenessHtml}
                   </div>
                 </div>
 
@@ -2584,19 +2590,33 @@
 
         const cardsEl = document.getElementById(`k-cards-${k}`);
         if (cardsEl) {
-          cardsEl.innerHTML = groups[k].map(j => `
+          cardsEl.innerHTML = groups[k].map(j => {
+            const fu = j.followup || {};
+            let fuBadge = '';
+            if (j.status === 'applied') {
+              if (fu.state === 'ghosted') {
+                fuBadge = `<span class="tech-tag" style="color: var(--text-muted); border-color: var(--border);">Sans réponse (J+${fu.days_since_applied || 21})</span>`;
+              } else if (fu.state === 'due') {
+                fuBadge = `<span class="tech-tag" style="color: var(--color-amber); border-color: rgba(217, 119, 6, 0.45);">Relance conseillée (J+${fu.days_since_applied || 7})</span>`;
+              } else if (fu.state === 'scheduled') {
+                fuBadge = `<span class="tech-tag" style="color: var(--color-indigo); border-color: rgba(99, 102, 241, 0.3);">Relance dans ${fu.days_until_followup ?? 7}j</span>`;
+              }
+            }
+            return `
             <div class="job-card" style="padding: 12px 14px; gap: 8px; cursor: pointer;" onclick="viewJobDetail('${esc(j.id)}')">
               <div style="display: flex; justify-content: space-between; align-items: baseline;">
                 <span class="job-company">${esc(j.company)}</span>
                 <span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 11.5px; color: var(--text-muted);">${j.fit_score ? j.fit_score.toFixed(1) : '0.0'}</span>
               </div>
               <div style="font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--text);">${esc(j.title)}</div>
+              ${fuBadge ? `<div style="display: flex; flex-wrap: wrap; gap: 4px;">${fuBadge}</div>` : ''}
               <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
                 <span style="font-size: 11px; color: var(--text-muted);">${esc(j.source || 'Direct')}</span>
                 <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick="event.stopPropagation(); triggerAutoFill('${esc(j.id)}')">Pré-remplir</button>
               </div>
             </div>
-          `).join('');
+          `;
+          }).join('');
         }
       });
     }
@@ -2639,8 +2659,25 @@
           <button class="btn btn-primary" onclick="triggerAutoFill('${esc(j.id)}')">Pré-remplir la candidature</button>
           <button class="btn" onclick="quickGenerateTailoredCV('${esc(j.id)}')">Adapter mon CV (ATS)</button>
           <button class="btn" onclick="quickGenerateCoverLetter('${esc(j.id)}')">Lettre de motivation PDF</button>
+          <button class="btn" onclick="checkSingleLiveness('${esc(j.id)}')">Vérifier l'offre</button>
           ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" rel="noopener" class="btn">Voir l'offre originale ↗</a>` : ''}
         `;
+
+        const fu = j.followup || {};
+        const followupBoxHtml = (j.status === 'applied' && fu.suggested_message) ? `
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--color-amber);">
+                Suivi de candidature · Relance #${(fu.followup_count || 0) + 1} (${fu.state === 'due' ? 'À envoyer maintenant' : `Prévue dans ${fu.days_until_followup ?? 7}j`})
+              </span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn" style="height: 26px; font-size: 11.5px;" onclick="copyFollowupDraft()">Copier la relance</button>
+                <button class="btn btn-primary" style="height: 26px; font-size: 11.5px;" onclick="markFollowupSent('${esc(j.id)}')">Marquer relancée (+7j)</button>
+              </div>
+            </div>
+            <div class="prose-box" id="modal-followup-draft" style="font-size: 12.5px;">${esc(fu.suggested_message)}</div>
+          </div>
+        ` : '';
 
         document.getElementById('tab-pitch').innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -2648,6 +2685,7 @@
             <button class="btn" style="height: 28px;" onclick="copyPitchAction('${esc(j.id)}')">Copier</button>
           </div>
           <div class="prose-box">${esc(j.tailored_pitch || 'Aucun contenu généré pour cette offre.')}</div>
+          ${followupBoxHtml}
         `;
 
         if (j.proof_of_work && typeof j.proof_of_work === 'object') {
@@ -2849,11 +2887,91 @@
       }
     }
 
+    function renderLivenessBadges(j) {
+      const parts = [];
+      const lv = (j.liveness_status || 'unknown').toLowerCase();
+      if (lv === 'active') {
+        parts.push(`<span class="tech-tag" style="color: var(--color-emerald); border-color: rgba(16, 185, 129, 0.35);">Offre vérifiée</span>`);
+      } else if (lv === 'expired') {
+        parts.push(`<span class="tech-tag" style="color: var(--brand-red); border-color: rgba(190, 62, 43, 0.45);">Expirée</span>`);
+      }
+      const reposts = parseInt(j.repost_count || 0, 10);
+      if (reposts >= 2) {
+        parts.push(`<span class="tech-tag" style="color: var(--color-amber); border-color: rgba(217, 119, 6, 0.45);" title="Offre republiée ${reposts} fois (risque de Ghost Job)">Repost ×${reposts}</span>`);
+      }
+      const fu = j.followup || {};
+      if (j.status === 'applied') {
+        if (fu.state === 'due') {
+          parts.push(`<span class="tech-tag" style="color: var(--color-amber); border-color: rgba(217, 119, 6, 0.45);">Relance J+${fu.days_since_applied || 7}</span>`);
+        } else if (fu.state === 'ghosted') {
+          parts.push(`<span class="tech-tag" style="color: var(--text-muted); border-color: var(--border);">Sans réponse (J+${fu.days_since_applied || 21})</span>`);
+        }
+      }
+      return parts.join('');
+    }
+
+    async function checkSingleLiveness(jobId) {
+      showToast("Vérification de l'offre en cours...");
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/check-liveness`, { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'active') {
+          showToast(`Offre active : ${d.reason}`);
+        } else if (d.status === 'expired') {
+          showToast(`Offre expirée : ${d.reason}`);
+        } else {
+          showToast(`Statut incertain : ${d.reason}`);
+        }
+        await loadJobs();
+      } catch (e) {
+        showToast("Erreur lors de la vérification de l'offre");
+      }
+    }
+
+    async function triggerLivenessBatch() {
+      showToast("Vérification des offres principales en cours...");
+      try {
+        const res = await fetch('/api/liveness/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit: 15, min_score: 7.0, ttl_hours: 6 })
+        });
+        const d = await res.json();
+        showToast(`${d.checked || 0} offre(s) vérifiée(s) : ${d.active || 0} active(s), ${d.expired || 0} expirée(s)`);
+        await loadJobs();
+      } catch (e) {
+        showToast("Impossible de lancer la vérification groupée");
+      }
+    }
+
+    function copyFollowupDraft() {
+      const el = document.getElementById('modal-followup-draft');
+      if (el) {
+        navigator.clipboard.writeText(el.textContent);
+        showToast("Message de relance copié");
+      }
+    }
+
+    async function markFollowupSent(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/followup-sent`, { method: 'POST' });
+        const d = await res.json();
+        if (d.success) {
+          showToast("Relance enregistrée · Prochain rappel dans 7 jours");
+          await viewJobDetail(jobId);
+          await loadJobs();
+        }
+      } catch (e) {
+        showToast("Impossible d'enregistrer la relance");
+      }
+    }
+
     async function updateJobStatus(jobId, status) {
       try {
         await fetch(`/api/jobs/${jobId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
         showToast(`Statut mis à jour : ${status}`);
         loadStats();
+        loadJobs();
       } catch (e) {}
     }
 
