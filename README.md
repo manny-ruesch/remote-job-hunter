@@ -84,6 +84,8 @@ For every qualified offer, the Command Center can generate two ready-to-send A4 
 | **Greenhouse** (`greenhouse`) | company boards | none | no | following specific employers | ✅ built in |
 | **Ashby** (`ashby`) | company boards | none | no | AI scaleups, modern SaaS & PMEs | ✅ built in |
 | **Lever** (`lever`) | company boards | none | no | scaleups & direct ATS boards | ✅ built in |
+| **SmartRecruiters** (`smartrecruiters`) | company boards | none | no | European & enterprise ATS boards | ✅ built in |
+| **Workable** (`workable`) | company boards | none | no | fast-growing startups & PMEs | ✅ built in |
 | **Welcome to the Jungle** (`wttj`) | by keyword | none | no | French & European scaleups | ✅ built in |
 | **We Work Remotely** (`wwr`) | RSS feeds | none | yes | global remote programming & ops | ✅ built in |
 | **Jobicy** (`jobicy`) | JSON feed | none | yes | curated remote opportunities | ✅ built in |

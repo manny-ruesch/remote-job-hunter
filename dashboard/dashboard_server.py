@@ -38,6 +38,13 @@ from rjh.liveness import (
     utc_now,
 )
 from rjh.market_radar import add_skill_to_profile, analyze_market_radar
+from rjh.discovery import (
+    discover_boards_from_db,
+    import_linkedin_connections_csv,
+    match_warm_intros_for_jobs,
+    probe_company_ats,
+    sync_discovered_boards_to_profile,
+)
 
 ACTIVE_HOME = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else HUNTER_DIR
 PROFILE_PATH = ACTIVE_HOME / "profile.yaml" if (ACTIVE_HOME / "profile.yaml").exists() else HUNTER_DIR / "profile.yaml"
@@ -45,6 +52,14 @@ current_rjh_profile = load_profile(PROFILE_PATH if PROFILE_PATH.exists() else HU
 ACTIVE_DB = os.environ.get("RJH_DB") or str((ACTIVE_HOME if (ACTIVE_HOME / "jobs.db").exists() else HUNTER_DIR) / "jobs.db")
 manual_store = SqliteTicketStore(ACTIVE_DB)
 manual_service = ManualService(manual_store, current_rjh_profile)
+
+
+def _active_db_path() -> str:
+    if os.environ.get("RJH_DB"):
+        return os.environ["RJH_DB"]
+    if os.environ.get("RJH_HOME"):
+        return str(Path(os.environ["RJH_HOME"]).expanduser() / "jobs.db")
+    return ACTIVE_DB
 
 
 def _count_configured_sources() -> int:
@@ -563,6 +578,103 @@ def add_market_radar_keyword(payload: dict[str, Any]):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Impossible de mettre à jour le profil : {e}")
+
+
+@app.get("/api/discovery/boards")
+def get_discovered_boards():
+    boards = discover_boards_from_db(_active_db_path(), current_rjh_profile)
+    return {
+        "success": True,
+        "count": len(boards),
+        "new_count": sum(1 for b in boards if not b.already_configured),
+        "boards": [b.to_dict() for b in boards],
+    }
+
+
+@app.post("/api/discovery/probe")
+async def probe_companies(request: Request):
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    raw_companies = body.get("companies") or body.get("company") or []
+    if isinstance(raw_companies, str):
+        companies = [c.strip() for c in raw_companies.replace(";", ",").split(",") if c.strip()]
+    elif isinstance(raw_companies, list):
+        companies = [str(c).strip() for c in raw_companies if str(c).strip()]
+    else:
+        companies = []
+
+    if not companies:
+        raise HTTPException(status_code=400, detail="Veuillez fournir au moins un nom d'entreprise ou slug.")
+
+    # Borne de sécurité anti-amplification (max 8 entreprises par appel HTTP)
+    companies = companies[:8]
+    discovered = []
+    seen = set()
+    for comp in companies:
+        for b in probe_company_ats(comp, profile=current_rjh_profile, timeout=3.5):
+            key = (b.provider, b.slug)
+            if key not in seen:
+                seen.add(key)
+                discovered.append(b.to_dict())
+
+    return {
+        "success": True,
+        "probed_companies": companies,
+        "count": len(discovered),
+        "boards": discovered,
+    }
+
+
+@app.post("/api/discovery/sync-boards")
+async def sync_boards_endpoint(request: Request):
+    global current_rjh_profile
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    boards = body.get("boards")
+    prof_file = PROFILE_PATH if PROFILE_PATH.exists() else (HUNTER_DIR / "profile.yaml")
+
+    if not boards:
+        # Si aucun board n'est spécifié explicitement, synchroniser tous les nouveaux boards découverts en base
+        db_boards = discover_boards_from_db(_active_db_path(), current_rjh_profile)
+        boards = [b for b in db_boards if not b.already_configured]
+
+    try:
+        res = sync_discovered_boards_to_profile(boards, prof_file)
+        if prof_file.exists():
+            current_rjh_profile = load_profile(prof_file)
+            manual_service.profile = current_rjh_profile
+        return {
+            "success": True,
+            "configured_sources_count": _count_configured_sources(),
+            **res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Impossible de synchroniser profile.yaml : {e}")
+
+
+@app.post("/api/referrals/import-csv")
+async def import_referrals_csv(file: UploadFile = File(...)):
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Fichier CSV vide.")
+    res = import_linkedin_connections_csv(content, _active_db_path())
+    if res.get("imported", 0) == 0 and res.get("reason"):
+        raise HTTPException(status_code=400, detail=res["reason"])
+    matches = match_warm_intros_for_jobs(
+        _active_db_path(),
+        candidate_name=current_rjh_profile.identity.name,
+        lang=current_rjh_profile.llm.language or "fr",
+    )
+    return {"success": True, "import": res, "matches": matches}
+
+
+@app.get("/api/referrals/matches")
+def get_referral_matches(limit: int = 50):
+    matches = match_warm_intros_for_jobs(
+        _active_db_path(),
+        candidate_name=current_rjh_profile.identity.name,
+        lang=current_rjh_profile.llm.language or "fr",
+        limit=limit,
+    )
+    return {"success": True, **matches}
 
 
 @app.get("/api/candidate-profile")

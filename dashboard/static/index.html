@@ -1173,6 +1173,10 @@
     </div>
 
     <div class="header-actions">
+      <button class="btn btn-ghost" onclick="openDiscoveryModal()" title="Auto-Discovery ATS &amp; Cooptation LinkedIn (Warm Intros)">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Réseau &amp; ATS</span>
+      </button>
       <button class="btn btn-ghost" onclick="openMarketRadarModal()" title="Radar Compétences &amp; Audit des Filtres (Skill Gap)">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
         <span>Radar Marché</span>
@@ -1463,6 +1467,52 @@
       </div>
       <div id="radar-body" style="display: flex; flex-direction: column; gap: 18px; max-height: 72vh; overflow-y: auto; padding-right: 4px;">
         <div style="font-size: 13px; color: var(--text-muted);">Analyse du marché en cours...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discovery ATS & LinkedIn Referrals Modal -->
+  <div class="modal-overlay" id="discovery-modal" onclick="closeDiscoveryModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 960px;">
+      <div class="modal-header">
+        <div>
+          <div class="job-company">Expansion des Sources &amp; Cooptation</div>
+          <div class="modal-headline">Reverse-ATS Auto-Discovery &amp; LinkedIn Warm Intros</div>
+          <div class="job-submeta" id="discovery-submeta">Découverte de portails cachés (Ashby, Greenhouse, Lever, SmartRecruiters, Workable) et connexions internes</div>
+        </div>
+        <button class="btn btn-icon" onclick="closeDiscoveryModal()" aria-label="Fermer">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 18px; max-height: 72vh; overflow-y: auto; padding-right: 4px;">
+        <!-- Colonne 1 : Reverse-ATS Auto-Discovery -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="section-label">1. Reverse-ATS Auto-Discovery</div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="ats-probe-input" class="search-input" style="flex: 1; padding-left: 12px;" placeholder="Sonder des entreprises (ex: Alan, Pennylane, Deel)..." />
+            <button class="btn btn-primary" id="btn-ats-probe" onclick="probeCompaniesAts()">Sonder</button>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="ats-discovered-summary" style="font-size: 12px; color: var(--text-muted);">Chargement des portails détectés...</span>
+            <button class="btn" id="btn-ats-sync" onclick="syncAllDiscoveredBoards()" style="height: 26px; padding: 0 10px; font-size: 11.5px;">+ Tout synchroniser dans profile.yaml</button>
+          </div>
+          <div id="ats-boards-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+
+        <!-- Colonne 2 : LinkedIn Warm Intros & Referrals -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="section-label">2. Cooptation LinkedIn (Warm Intros)</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid);">
+            <div style="font-size: 12px; color: var(--text-muted);">
+              Importez votre export <code style="color: var(--text);">Connections.csv</code> LinkedIn (100% local)
+            </div>
+            <input type="file" id="linkedin-csv-input" accept=".csv" style="display: none;" onchange="uploadLinkedinCsv(event)" />
+            <button class="btn" onclick="document.getElementById('linkedin-csv-input').click()" style="height: 28px; font-size: 12px;">Importer CSV</button>
+          </div>
+          <div id="referrals-summary" style="font-size: 12px; color: var(--text-muted);">Recherche de connexions internes...</div>
+          <div id="referrals-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -3187,6 +3237,215 @@
       } catch (e) {
         showToast('Impossible de mettre à jour le profil');
         if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Ajouter au profil'; }
+      }
+    }
+
+    // ==========================================
+    // REVERSE-ATS DISCOVERY & LINKEDIN REFERRALS
+    // ==========================================
+    let currentDiscoveredBoards = [];
+
+    async function openDiscoveryModal() {
+      const m = document.getElementById('discovery-modal');
+      m.style.display = 'flex';
+      await Promise.all([loadDiscoveredBoards(), loadReferralMatches()]);
+    }
+
+    function closeDiscoveryModal(e) {
+      if (e && e.target !== document.getElementById('discovery-modal')) return;
+      document.getElementById('discovery-modal').style.display = 'none';
+    }
+
+    async function loadDiscoveredBoards() {
+      const box = document.getElementById('ats-boards-list');
+      const summary = document.getElementById('ats-discovered-summary');
+      try {
+        const res = await fetch('/api/discovery/boards');
+        const data = await res.json();
+        currentDiscoveredBoards = data.boards || [];
+        summary.textContent = `${data.count || 0} portail(s) identifié(s) dont ${data.new_count || 0} nouveau(x)`;
+        renderDiscoveredBoards(currentDiscoveredBoards);
+      } catch (e) {
+        box.innerHTML = `<div style="font-size: 12px; color: var(--brand-red);">Erreur de chargement des portails ATS.</div>`;
+      }
+    }
+
+    function renderDiscoveredBoards(boards) {
+      const box = document.getElementById('ats-boards-list');
+      if (!boards || !boards.length) {
+        box.innerHTML = `<div style="font-size: 12.5px; color: var(--text-muted);">Aucun portail ATS détecté pour le moment. Saisissez un nom d'entreprise ci-dessus pour sonder Ashby, Greenhouse, Lever, SmartRecruiters et Workable.</div>`;
+        return;
+      }
+      box.innerHTML = boards.slice(0, 20).map(b => {
+        const badge = b.already_configured
+          ? `<span class="badge" style="color: var(--color-emerald); border-color: rgba(16,185,129,0.3);">Actif</span>`
+          : `<button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick='syncSingleBoard(${JSON.stringify(b.provider)}, ${JSON.stringify(b.slug)}, this)'>+ Ajouter</button>`;
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 600; font-size: 13px; color: var(--text);">${escapeHtml(b.company || b.slug)}</span>
+                <span class="badge">${escapeHtml(b.provider)}/${escapeHtml(b.slug)}</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                ${b.job_count || 0} offre(s) · ${(b.sample_titles || []).slice(0, 2).map(escapeHtml).join(' · ')}
+              </div>
+            </div>
+            ${badge}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function probeCompaniesAts() {
+      const inp = document.getElementById('ats-probe-input');
+      const btn = document.getElementById('btn-ats-probe');
+      const val = (inp.value || '').trim();
+      if (!val) return;
+      btn.disabled = true;
+      btn.textContent = 'Sondage...';
+      try {
+        const res = await fetch('/api/discovery/probe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companies: val })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.detail || 'Erreur lors du sondage ATS');
+        } else {
+          const probed = data.boards || [];
+          const existingKeys = new Set(currentDiscoveredBoards.map(x => `${x.provider}:${x.slug}`));
+          for (const b of probed) {
+            if (!existingKeys.has(`${b.provider}:${b.slug}`)) {
+              currentDiscoveredBoards.unshift(b);
+            }
+          }
+          renderDiscoveredBoards(currentDiscoveredBoards);
+          showToast(`${probed.length} portail(s) ATS découvert(s) !`);
+        }
+      } catch (e) {
+        showToast('Erreur réseau lors du sondage ATS');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sonder';
+      }
+    }
+
+    async function syncSingleBoard(provider, slug, btnEl) {
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+      try {
+        const res = await fetch('/api/discovery/sync-boards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boards: [{ provider, slug }] })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Board ${provider}/${slug} ajouté à profile.yaml`);
+          const srcEl = document.getElementById('health-sources');
+          if (srcEl && data.configured_sources_count) srcEl.textContent = `${data.configured_sources_count} sources`;
+          await loadDiscoveredBoards();
+        }
+      } catch (e) {
+        showToast('Impossible de synchroniser le board');
+      }
+    }
+
+    async function syncAllDiscoveredBoards() {
+      const toSync = currentDiscoveredBoards.filter(b => !b.already_configured);
+      if (!toSync.length) {
+        showToast('Tous les portails affichés sont déjà configurés.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/discovery/sync-boards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boards: toSync.map(b => ({ provider: b.provider, slug: b.slug })) })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`${(data.added || []).length} nouveau(x) portail(s) synchronisé(s) dans profile.yaml !`);
+          const srcEl = document.getElementById('health-sources');
+          if (srcEl && data.configured_sources_count) srcEl.textContent = `${data.configured_sources_count} sources`;
+          await loadDiscoveredBoards();
+        }
+      } catch (e) {
+        showToast('Erreur lors de la synchronisation des portails');
+      }
+    }
+
+    async function uploadLinkedinCsv(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch('/api/referrals/import-csv', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.detail || 'Format CSV non reconnu');
+          return;
+        }
+        showToast(`${data.import.imported} contact(s) LinkedIn importé(s) !`);
+        await loadReferralMatches();
+      } catch (e) {
+        showToast('Erreur lors de l\'import du CSV LinkedIn');
+      }
+    }
+
+    async function loadReferralMatches() {
+      const box = document.getElementById('referrals-list');
+      const summary = document.getElementById('referrals-summary');
+      try {
+        const res = await fetch('/api/referrals/matches');
+        const data = await res.json();
+        summary.textContent = `${data.total_contacts || 0} contact(s) en base · ${data.matched_jobs_count || 0} offre(s) avec Warm Intro directe`;
+        const matched = data.matched_jobs || [];
+        const fallbacks = data.fallback_targets || [];
+
+        let html = '';
+        if (matched.length) {
+          html += matched.slice(0, 12).map(m => {
+            const firstContact = (m.contacts || [])[0] || {};
+            return `
+              <div style="padding: 10px 12px; border: 1px solid rgba(16,185,129,0.35); border-radius: 6px; background: var(--card-solid); display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 600; font-size: 13px; color: var(--text);">${escapeHtml(m.company)} — ${escapeHtml(m.title)}</span>
+                  <span class="badge" style="color: var(--color-emerald);">${m.contacts_count} contact(s)</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                  Contact : <strong style="color: var(--text);">${escapeHtml(firstContact.full_name || '')}</strong> (${escapeHtml(firstContact.position || 'Employé')})
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick='navigator.clipboard.writeText(${JSON.stringify(firstContact.referral_draft || "")}); showToast("Message de cooptation copié !");'>Copier demande de cooptation</button>
+                  ${firstContact.linkedin_url ? `<a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(firstContact.linkedin_url)}" target="_blank" rel="noopener">Profil LinkedIn</a>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        if (fallbacks.length) {
+          html += `<div class="section-label" style="margin-top: 6px;">Recherche directe de pairs &amp; recruteurs (1-clic)</div>`;
+          html += fallbacks.slice(0, 8).map(f => `
+            <div style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+              <div>
+                <div style="font-weight: 600; font-size: 12.5px; color: var(--text);">${escapeHtml(f.company)}</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(f.title)}</div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(f.linkedin_search.peers_search_url)}" target="_blank" rel="noopener">Pairs</a>
+                <a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(f.linkedin_search.recruiters_search_url)}" target="_blank" rel="noopener">Recruteurs</a>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        box.innerHTML = html || `<div style="font-size: 12.5px; color: var(--text-muted);">Aucune offre active à croiser pour le moment.</div>`;
+      } catch (e) {
+        box.innerHTML = `<div style="font-size: 12px; color: var(--brand-red);">Erreur lors du chargement des cooptations.</div>`;
       }
     }
 

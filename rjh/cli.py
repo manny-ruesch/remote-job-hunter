@@ -13,6 +13,13 @@ from pathlib import Path
 from typing import Any, Callable, MutableMapping, Sequence
 
 from . import __version__
+from .discovery import (
+    discover_boards_from_db,
+    import_linkedin_connections_csv,
+    match_warm_intros_for_jobs,
+    probe_company_ats,
+    sync_discovered_boards_to_profile,
+)
 from .doctor import render, run_doctor, to_json, unicode_supported
 from .market_radar import add_skill_to_profile, analyze_market_radar
 from .messages import detect_lang, t
@@ -65,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
     mr.add_argument("--add-skill", help="ajoute immédiatement cette compétence dans profile.yaml")
     mr.add_argument("--weight", type=float, default=6.0, help="poids de boost lors d'un --add-skill (défaut 6)")
     mr.add_argument("--json", action="store_true", help="sortie JSON du radar marché")
+
+    disc = sub.add_parser("discover", help="auto-découvre des boards ATS directs et synchronise profile.yaml")
+    disc.add_argument("--probe", action="append", default=[], help="entreprise ou slug à sonder sur les 5 ATS publics (répétable)")
+    disc.add_argument("--sync", action="store_true", help="ajoute automatiquement les nouveaux boards découverts dans profile.yaml")
+    disc.add_argument("--json", action="store_true", help="sortie JSON")
+
+    ref = sub.add_parser("referrals", help="importe Connections.csv LinkedIn et détecte les cooptations (Warm Intros)")
+    ref.add_argument("--import-csv", help="chemin vers votre fichier Connections.csv exporté de LinkedIn")
+    ref.add_argument("--json", action="store_true", help="sortie JSON")
 
     sub.add_parser("token", help="génère un jeton d'accès aléatoire pour RJH_TOKEN")
     sub.add_parser("paths", help="affiche où sont rangés vos fichiers")
@@ -216,6 +232,74 @@ def cmd_radar(args, out: Callable[[str], None], lang: str, home: Path, env: Muta
     return 0
 
 
+def cmd_discover(args, out: Callable[[str], None], lang: str, home: Path, env: MutableMapping[str, str]) -> int:
+    prof_file = profile_path(home)
+    if not prof_file.exists():
+        prof_file = Path("profile.yaml")
+    prof = None
+    if prof_file.exists():
+        try:
+            prof = load_profile(prof_file)
+        except ProfileError:
+            prof = None
+
+    boards = discover_boards_from_db(db_path(home, env), prof)
+    for company in (args.probe or []):
+        for b in probe_company_ats(company, profile=prof):
+            if not any(x.provider == b.provider and x.slug == b.slug for x in boards):
+                boards.append(b)
+
+    sync_res = None
+    if args.sync and prof_file.exists():
+        new_boards = [b for b in boards if not b.already_configured]
+        sync_res = sync_discovered_boards_to_profile(new_boards, prof_file)
+
+    if args.json:
+        out(json.dumps({"boards": [b.to_dict() for b in boards], "sync": sync_res}, ensure_ascii=False, indent=2))
+        return 0
+
+    out(f"=== Reverse-ATS Auto-Discovery ({len(boards)} board(s) détecté(s)) ===")
+    for b in boards:
+        tag = "déjà configuré" if b.already_configured else "NOUVEAU"
+        out(f"  [{b.provider:15}] {b.slug:22} ({b.job_count} offre(s)) - {tag}")
+    if sync_res:
+        out(f"\nSynchronisés dans {prof_file.name} : {len(sync_res['added'])} ajouté(s).")
+    return 0
+
+
+def cmd_referrals(args, out: Callable[[str], None], lang: str, home: Path, env: MutableMapping[str, str]) -> int:
+    dbf = db_path(home, env)
+    import_res = None
+    if args.import_csv:
+        csv_file = Path(args.import_csv).expanduser()
+        if not csv_file.exists():
+            out(f"Fichier introuvable : {csv_file}")
+            return 2
+        import_res = import_linkedin_connections_csv(csv_file.read_bytes(), dbf)
+
+    prof_file = profile_path(home)
+    if not prof_file.exists():
+        prof_file = Path("profile.yaml")
+    cand_name = ""
+    if prof_file.exists():
+        try:
+            cand_name = load_profile(prof_file).identity.name
+        except Exception:
+            cand_name = ""
+
+    match_res = match_warm_intros_for_jobs(dbf, candidate_name=cand_name, lang=lang)
+    if args.json:
+        out(json.dumps({"import": import_res, "matches": match_res}, ensure_ascii=False, indent=2))
+        return 0
+
+    if import_res:
+        out(f"Import LinkedIn : {import_res['imported']} contact(s) importé(s) ({import_res['total_in_db']} au total).")
+    out(f"=== Warm Intros & Cooptations ({match_res['matched_jobs_count']} offre(s) avec contact interne) ===")
+    for mj in match_res["matched_jobs"][:10]:
+        out(f"  * {mj['company']} — {mj['title']} ({mj['contacts_count']} contact(s))")
+    return 0
+
+
 def _importable(module: str) -> bool:
     try:
         return importlib.util.find_spec(module) is not None
@@ -245,6 +329,10 @@ def main(argv: Sequence[str] | None = None, *, io: IO | None = None, environ: Mu
         return cmd_scan(args, io.out, lang, home, env, http_factory)
     if args.cmd == "radar":
         return cmd_radar(args, io.out, lang, home, env)
+    if args.cmd == "discover":
+        return cmd_discover(args, io.out, lang, home, env)
+    if args.cmd == "referrals":
+        return cmd_referrals(args, io.out, lang, home, env)
     if args.cmd == "token":
         io.out(secrets.token_urlsafe(32))
         return 0
