@@ -20,24 +20,46 @@ and lets you use the ChatGPT / Claude / Gemini subscription you already pay for.
 ## Start in 60 seconds
 
 ```bash
-pipx install remote-job-hunter     # puts the `rjh` command in your terminal
+# Option A — Zero install (uvx)
+uvx --from git+https://github.com/manny-ruesch/remote-job-hunter rjh serve
+
+# Option B — Permanent CLI (pipx)
+pipx install git+https://github.com/manny-ruesch/remote-job-hunter
 rjh init                           # 4 questions, no file to edit by hand
 rjh doctor                         # ~2 seconds: is your AI, your sources and your database ready?
 rjh serve                          # Command Center on http://127.0.0.1:5070
 ```
 
-No Python? Use [Docker](#run-it-on-a-nas-or-a-vps). No API key? That is the point: read on.
+No Python? Use [Docker](#run-it-on-a-nas-or-a-vps) (or double-click `start_command_center.bat` on Windows). No API key? That is the point: read on.
 
 <details><summary><b>Démarrage rapide en français</b></summary>
 
 ```bash
-pipx install remote-job-hunter
+uvx --from git+https://github.com/manny-ruesch/remote-job-hunter rjh serve
+# ou en installation permanente :
+pipx install git+https://github.com/manny-ruesch/remote-job-hunter
 rjh init       # 4 questions : poste, lieu, niveau, IA
 rjh doctor     # vérifie que tout est prêt
-rjh serve      # ouvre le Command Center
+rjh serve      # ouvre le Command Center sur http://127.0.0.1:5070
 ```
 Aucune clé d'API n'est nécessaire : choisissez « abonnement ChatGPT / Claude / Gemini » à la question 4.
 </details>
+
+## Why Remote Job Hunter? (vs. SaaS Trackers & CLI Prompt Wrappers)
+
+Most "AI job search" repositories are either disguised SaaS subscriptions ($40/mo) or collections of Markdown prompts for developer CLIs that burn $20+ in API tokens per week and require Node/LaTeX toolchains. **Remote Job Hunter is a standalone, tested local software engine (204 unit tests):**
+
+| Capability | SaaS AI Job Trackers ($29–$49/mo) | CLI Markdown Prompt Wrappers (`career-ops`, etc.) | **Remote Job Hunter (MIT)** |
+|---|---|---|---|
+| **Cost & LLM Requirement** | Paid subscription | Paid API tokens or paid coding CLI | **$0 — Works with your existing ChatGPT/Claude/Gemini web chat (`manual`), free Gemini API, or local `ollama`** |
+| **Interface** | Web app (cloud-hosted) | Terminal / Markdown files only | **Full Web Command Center (`:5070` — Cards, Sortable Table, 4-Column Kanban) + CLI (`rjh`)** |
+| **Target Professions** | General | Tech / AI Engineers only | **Universal (Tech, AI, Product, Finance, Healthcare, Legal, Creative — offline CV parser included)** |
+| **Built-in Sources** | Closed aggregator | 4–5 ATS | **11 source families (Ashby, Greenhouse, Lever, SmartRecruiters, Workable, WTTJ, Remotive, WWR, Jobicy, HN, Adzuna)** |
+| **Reverse-ATS Discovery** | ❌ | Manual prompt | **`rjh discover` — Multi-threaded live probing across 5 ATS APIs + 1-click sync to `profile.yaml`** |
+| **Anti-Ghost Job & Liveness** | ❌ | LLM prompt check | **Zero-token direct ATS API verification (`active`/`expired`), Repost counter (>14d), and J+7 Follow-up Cadence Tracker** |
+| **Market Skill Gap Radar** | Basic keyword count | ❌ | **`rjh radar` — Cross-offer lexical gap analysis (65+ skills), filter rejection audit & 1-click profile boost** |
+| **LinkedIn Warm-Intro Matcher** | ❌ | ❌ | **`rjh referrals` — Local `Connections.csv` matcher + custom referral draft generator + 1-click people search** |
+| **1-Page ATS CV & Cover Letter** | Cloud templates | Requires LaTeX / Node | **Zero-LaTeX native Python PDF engine (`100/100` ATS self-audit, single-column A4, zero hallucinated facts)** |
 
 ## Zero-API-Key: use the subscription you already have
 
