@@ -64,6 +64,14 @@ _ASHBY_RE = re.compile(
     r"^https?://jobs\.ashbyhq\.com/([a-zA-Z0-9_.-]+)/([0-9a-fA-F-]{16,64})",
     re.IGNORECASE,
 )
+_SMARTRECRUITERS_RE = re.compile(
+    r"^https?://jobs\.smartrecruiters\.com/([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_-]{8,64})",
+    re.IGNORECASE,
+)
+_WORKABLE_RE = re.compile(
+    r"^https?://apply\.workable\.com/([a-zA-Z0-9_.-]+)/j/([a-zA-Z0-9_-]{6,32})",
+    re.IGNORECASE,
+)
 
 
 class SSRFBlockedError(ValueError):
@@ -371,6 +379,83 @@ def check_job_liveness(
                 reason=f"Vérification Ashby indisponible: {exc}",
                 checked_at=now_iso,
                 ats_provider="ashby",
+            )
+
+    # 4. SmartRecruiters direct API check
+    sr_match = _SMARTRECRUITERS_RE.match(url)
+    if sr_match and sr_match.group(1).lower() not in ("oneclick-ui", "sr-jobs", "api"):
+        board, posting_id = sr_match.group(1), sr_match.group(2)
+        api_url = f"https://api.smartrecruiters.com/v1/companies/{board}/postings/{posting_id}"
+        try:
+            code, _, body = get_fn(api_url)
+            if code == 200 and body:
+                data = json.loads(body)
+                if data.get("id") or data.get("name"):
+                    return LivenessResult(
+                        status="active",
+                        reason="Offre vérifiée active sur l'API SmartRecruiters",
+                        checked_at=now_iso,
+                        http_status=200,
+                        ats_provider="smartrecruiters",
+                    )
+            if code in (404, 410):
+                return LivenessResult(
+                    status="expired",
+                    reason=f"Offre retirée du portail SmartRecruiters (HTTP {code})",
+                    checked_at=now_iso,
+                    http_status=code,
+                    ats_provider="smartrecruiters",
+                )
+        except Exception as exc:
+            return LivenessResult(
+                status="uncertain",
+                reason=f"Vérification SmartRecruiters indisponible: {exc}",
+                checked_at=now_iso,
+                ats_provider="smartrecruiters",
+            )
+
+    # 5. Workable direct API check
+    wk_match = _WORKABLE_RE.match(url)
+    if wk_match and wk_match.group(1).lower() not in ("api", "j"):
+        board, shortcode = wk_match.group(1), wk_match.group(2).lower()
+        api_url = f"https://www.workable.com/api/accounts/{board}?details=false"
+        try:
+            code, _, body = get_fn(api_url)
+            if code in (404, 410):
+                return LivenessResult(
+                    status="expired",
+                    reason=f"Portail Workable introuvable (HTTP {code})",
+                    checked_at=now_iso,
+                    http_status=code,
+                    ats_provider="workable",
+                )
+            if code == 200 and body:
+                data = json.loads(body)
+                jobs_list = data.get("jobs") if isinstance(data, dict) else None
+                if isinstance(jobs_list, list):
+                    for item in jobs_list:
+                        sc = str(item.get("shortcode") or item.get("code") or "").lower()
+                        if sc == shortcode:
+                            return LivenessResult(
+                                status="active",
+                                reason="Offre présente dans le flux actif Workable",
+                                checked_at=now_iso,
+                                http_status=200,
+                                ats_provider="workable",
+                            )
+                    return LivenessResult(
+                        status="expired",
+                        reason="Offre absente du job-board actif Workable",
+                        checked_at=now_iso,
+                        http_status=200,
+                        ats_provider="workable",
+                    )
+        except Exception as exc:
+            return LivenessResult(
+                status="uncertain",
+                reason=f"Vérification Workable indisponible: {exc}",
+                checked_at=now_iso,
+                ats_provider="workable",
             )
 
     # 4. Vérification HTTP générique bornée

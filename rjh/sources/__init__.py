@@ -84,4 +84,4 @@ def collect(profile: Profile, *, prefilter: Prefilter | None = None, names: list
     return list(best.values()), reports
 
 
-from . import adzuna, ashby, greenhouse, hn, jobicy, lever, remotive, wttj, wwr  # noqa: E402,F401  (enregistrent leurs classes)
+from . import adzuna, ashby, greenhouse, hn, jobicy, lever, remotive, smartrecruiters, workable, wttj, wwr  # noqa: E402,F401  (enregistrent leurs classes)

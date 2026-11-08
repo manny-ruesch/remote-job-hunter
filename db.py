@@ -71,6 +71,20 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_analysis_status ON jobs(analysis_status);")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_dedupe_key ON jobs(dedupe_key);")
     c.execute("CREATE INDEX IF NOT EXISTS idx_jobs_followup ON jobs(status, next_followup_at);")
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS warm_contacts (
+        contact_key TEXT PRIMARY KEY,
+        full_name TEXT NOT NULL,
+        company TEXT NOT NULL,
+        company_norm TEXT NOT NULL,
+        position TEXT DEFAULT '',
+        linkedin_url TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        connected_on TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_warm_contacts_co ON warm_contacts(company_norm);")
     conn.commit()
     conn.close()
 
