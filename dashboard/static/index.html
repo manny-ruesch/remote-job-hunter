@@ -1173,6 +1173,10 @@
     </div>
 
     <div class="header-actions">
+      <button class="btn btn-ghost" onclick="openMarketRadarModal()" title="Radar Compétences &amp; Audit des Filtres (Skill Gap)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span>Radar Marché</span>
+      </button>
       <button class="btn btn-ghost" onclick="triggerLivenessBatch()" title="Vérifier que les offres à haute pertinence sont toujours ouvertes (Anti-Ghost Jobs)">
         <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span>Vérifier les offres</span>
@@ -1441,6 +1445,25 @@
         </button>
       </div>
       <div class="code-box" id="logs-content" style="max-height: 480px;">Chargement du journal...</div>
+    </div>
+  </div>
+
+  <!-- Market Radar & Skill Gap Modal -->
+  <div class="modal-overlay" id="radar-modal" onclick="closeMarketRadarModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 960px;">
+      <div class="modal-header">
+        <div>
+          <div class="job-company">Intelligence Marché &amp; Calibration</div>
+          <div class="modal-headline">Radar des Compétences &amp; Audit des Filtres</div>
+          <div class="job-submeta" id="radar-submeta">Analyse des offres collectées face à votre profil</div>
+        </div>
+        <button class="btn btn-icon" onclick="closeMarketRadarModal()" aria-label="Fermer">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="radar-body" style="display: flex; flex-direction: column; gap: 18px; max-height: 72vh; overflow-y: auto; padding-right: 4px;">
+        <div style="font-size: 13px; color: var(--text-muted);">Analyse du marché en cours...</div>
+      </div>
     </div>
   </div>
 
@@ -3026,6 +3049,144 @@
     function closeLogsModal(e) {
       if (!e || e.target.id === 'logs-modal' || e.target.closest('button')) {
         document.getElementById('logs-modal').style.display = 'none';
+      }
+    }
+
+    async function openMarketRadarModal() {
+      const m = document.getElementById('radar-modal');
+      m.style.display = 'flex';
+      const card = m.querySelector('.modal-card');
+      if (card && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        gsap.fromTo(card, { y: 24, scale: 0.95, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.3, ease: "power3.out", clearProps: "transform" });
+      }
+      await refreshMarketRadar();
+    }
+
+    function closeMarketRadarModal(e) {
+      if (!e || e.target.id === 'radar-modal' || e.target.closest('button')) {
+        document.getElementById('radar-modal').style.display = 'none';
+      }
+    }
+
+    async function refreshMarketRadar() {
+      const body = document.getElementById('radar-body');
+      const submeta = document.getElementById('radar-submeta');
+      try {
+        const res = await fetch('/api/market-radar?limit=500');
+        const d = await res.json();
+        submeta.textContent = `${d.deduped_jobs_count || 0} offres uniques analysées · ${d.viable_jobs_count || 0} offres dans votre cœur de cible · Couverture Top 10 : ${d.profile_coverage_pct || 0}%`;
+
+        const recsHtml = (d.profile_recommendations || []).map(r => `
+          <div style="padding: 10px 14px; border-radius: 6px; background: var(--surface-muted); border-left: 3px solid var(--amber); font-size: 12.5px; color: var(--text);">
+            ${esc(r)}
+          </div>
+        `).join('');
+
+        const missingRows = (d.missing_skills || []).slice(0, 10).map(s => {
+          const badgeColor = s.status === 'missing_high_demand' ? 'var(--brand-red)' : 'var(--amber)';
+          const badgeLabel = s.status === 'missing_high_demand' ? 'Forte demande' : 'Émergent';
+          const safeSkillAttr = esc(s.skill).replace(/'/g, "\\'");
+          return `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid);">
+              <div style="min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <strong style="font-size: 13px; color: var(--text);">${esc(s.skill)}</strong>
+                  <span style="font-size: 11px; color: var(--text-muted);">${esc(s.category)}</span>
+                  <span style="font-size: 10.5px; font-weight: 600; color: ${badgeColor}; border: 1px solid ${badgeColor}; border-radius: 4px; padding: 1px 6px;">${badgeLabel}</span>
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                  Présent dans <strong>${s.job_count}</strong> offres (${s.pct_of_jobs}%) · Score moyen : ${s.avg_fit_score}/10
+                </div>
+              </div>
+              <button class="btn" style="height: 26px; font-size: 11.5px; padding: 0 10px; flex-shrink: 0;" onclick="addRadarSkillToProfile('${safeSkillAttr}', this)">
+                + Ajouter au profil
+              </button>
+            </div>
+          `;
+        }).join('') || '<div style="font-size: 12.5px; color: var(--text-muted);">Aucune lacune détectée sur les offres analysées.</div>';
+
+        const coveredRows = (d.covered_skills || []).slice(0, 10).map(s => `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="font-size: 13px; color: var(--text);">${esc(s.skill)}</strong>
+                <span style="font-size: 11px; color: var(--text-muted);">${esc(s.category)}</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                Présent dans <strong>${s.job_count}</strong> offres (${s.pct_of_jobs}%) · Score moyen : ${s.avg_fit_score}/10
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 600; color: var(--emerald); padding: 2px 8px; border-radius: 4px; background: var(--emerald-soft);">Couvert ✓</span>
+          </div>
+        `).join('') || '<div style="font-size: 12.5px; color: var(--text-muted);">Aucune compétence couverte détectée pour le moment.</div>';
+
+        const gateRows = (d.gate_stats || []).map(g => `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px;">
+            <div>
+              <div><strong style="font-family: var(--font-mono);">${esc(g.gate_id)}</strong> <span style="color: var(--text-muted);">(${esc(g.action)})</span></div>
+              <div style="color: var(--text-muted); margin-top: 2px;">${esc(g.recommendation)}</div>
+            </div>
+            <div style="font-family: var(--font-mono); text-align: right; white-space: nowrap;">
+              ${g.rejected_count > 0 ? `<span style="color: var(--brand-red);">${g.rejected_count} rejet(s)</span>` : ''}
+              ${g.penalized_count > 0 ? `<span style="color: var(--amber);">${g.penalized_count} pénalité(s)</span>` : ''}
+              <span style="color: var(--text-muted);"> (${g.pct_of_corpus}%)</span>
+            </div>
+          </div>
+        `).join('') || '<div style="font-size: 12.5px; color: var(--text-muted); padding: 6px 0;">Aucun rejet de filtre déclenché sur ce lot.</div>';
+
+        const deadBoostHtml = (d.dead_boost_keywords && d.dead_boost_keywords.length > 0)
+          ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Mots-clés de boost à 0 occurrence : <span style="font-family: var(--font-mono); color: var(--text);">${d.dead_boost_keywords.map(esc).join(', ')}</span></div>`
+          : '';
+
+        body.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${recsHtml}
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;">
+            <div>
+              <div class="section-label">Compétences demandées absentes du profil (Skill Gap)</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">${missingRows}</div>
+            </div>
+            <div>
+              <div class="section-label">Compétences de votre profil les plus recherchées</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">${coveredRows}</div>
+            </div>
+          </div>
+          <div>
+            <div class="section-label">Audit des Filtres &amp; Gates du Profil</div>
+            <div style="border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; background: var(--card-solid);">
+              ${gateRows}
+            </div>
+            ${deadBoostHtml}
+          </div>
+        `;
+      } catch (e) {
+        body.innerHTML = `<div style="color: var(--brand-red); font-size: 13px;">Erreur lors du chargement du Radar Marché.</div>`;
+      }
+    }
+
+    async function addRadarSkillToProfile(skill, btnEl) {
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Ajout...';
+      }
+      try {
+        const res = await fetch('/api/market-radar/add-keyword', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skill: skill, weight: 6.0 })
+        });
+        const d = await res.json();
+        if (!res.ok) {
+          showToast(d.detail || 'Erreur lors de la mise à jour du profil');
+          if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Ajouter au profil'; }
+          return;
+        }
+        showToast(`« ${d.skill} » ajouté à votre profil (boost +${d.weight})`);
+        await refreshMarketRadar();
+      } catch (e) {
+        showToast('Impossible de mettre à jour le profil');
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Ajouter au profil'; }
       }
     }
 

@@ -14,9 +14,10 @@ from typing import Any, Callable, MutableMapping, Sequence
 
 from . import __version__
 from .doctor import render, run_doctor, to_json, unicode_supported
+from .market_radar import add_skill_to_profile, analyze_market_radar
 from .messages import detect_lang, t
 from .paths import db_path, env_path, home as default_home, load_dotenv, profile_path
-from .profile import ProfileError
+from .profile import ProfileError, load_profile
 from .scanner import run_scan
 from .wizard import IO, run_wizard
 
@@ -57,6 +58,13 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--dry-run", action="store_true", help="collecte et pré-trie sans appeler le LLM ni écrire en base")
     sc.add_argument("--source", action="append", dest="sources", help="limite la collecte à cette source (répétable)")
     sc.add_argument("--json", action="store_true", help="sortie JSON du rapport de scan")
+
+    mr = sub.add_parser("radar", help="analyse le marché des compétences et audite vos filtres")
+    mr.add_argument("--min-score", type=float, default=0.0, help="score minimal pour les offres analysées")
+    mr.add_argument("--limit", type=int, default=500, help="nombre maximal d'offres à analyser (défaut 500)")
+    mr.add_argument("--add-skill", help="ajoute immédiatement cette compétence dans profile.yaml")
+    mr.add_argument("--weight", type=float, default=6.0, help="poids de boost lors d'un --add-skill (défaut 6)")
+    mr.add_argument("--json", action="store_true", help="sortie JSON du radar marché")
 
     sub.add_parser("token", help="génère un jeton d'accès aléatoire pour RJH_TOKEN")
     sub.add_parser("paths", help="affiche où sont rangés vos fichiers")
@@ -149,6 +157,65 @@ def cmd_scan(args, out: Callable[[str], None], lang: str, home: Path, env: Mutab
     return 0
 
 
+def cmd_radar(args, out: Callable[[str], None], lang: str, home: Path, env: MutableMapping[str, str]) -> int:
+    prof_file = profile_path(home)
+    if not prof_file.exists():
+        out(t(lang, "s_noprofile", path=prof_file))
+        return 2
+    cand_json = home / "candidate_profile.json"
+    if args.add_skill:
+        try:
+            res = add_skill_to_profile(
+                args.add_skill,
+                prof_file,
+                cand_json if cand_json.exists() else None,
+                weight=args.weight,
+            )
+            if args.json:
+                out(json.dumps(res, ensure_ascii=False, indent=2))
+            else:
+                out(f"+ Compétence ajoutée au profil : {res['skill']} (boost +{res['weight']:g})")
+            return 0
+        except (ValueError, ProfileError) as e:
+            out(str(e))
+            return 2
+
+    try:
+        prof = load_profile(prof_file)
+    except ProfileError as e:
+        out(t(lang, "d_profile_bad", err=e))
+        return 2
+
+    report = analyze_market_radar(
+        db_path(home, env),
+        prof,
+        cand_json if cand_json.exists() else None,
+        min_score=args.min_score,
+        limit=args.limit,
+    )
+    if args.json:
+        out(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+        return 0
+
+    out(f"=== Market Skill Gap & Filter Audit ({report.deduped_jobs_count} offres uniques, {report.viable_jobs_count} retenues) ===")
+    out(f"Couverture du profil sur le Top 10 marché : {report.profile_coverage_pct:.1f}%")
+    if report.missing_skills:
+        out("\nCompétences demandées absentes de votre profil :")
+        for it in report.missing_skills[:8]:
+            out(f"  - {it.skill:20} ({it.category}) : {it.job_count} offres ({it.pct_of_jobs:.1f}%) [{it.status}]")
+    if report.covered_skills:
+        out("\nCompétences fortes de votre profil dans le marché :")
+        for it in report.covered_skills[:8]:
+            out(f"  + {it.skill:20} ({it.category}) : {it.job_count} offres ({it.pct_of_jobs:.1f}%)")
+    if report.gate_stats:
+        out("\nAudit des filtres (Gates) :")
+        for gs in report.gate_stats[:6]:
+            out(f"  * {gs.gate_id:18} ({gs.action}) : {gs.rejected_count} rejet(s), {gs.penalized_count} pénalité(s) ({gs.pct_of_corpus:.1f}%)")
+    for rec in report.profile_recommendations:
+        out(f"\n-> {rec}")
+    return 0
+
+
 def _importable(module: str) -> bool:
     try:
         return importlib.util.find_spec(module) is not None
@@ -176,6 +243,8 @@ def main(argv: Sequence[str] | None = None, *, io: IO | None = None, environ: Mu
         return cmd_serve(args, io.out, lang, home, env, runner)
     if args.cmd == "scan":
         return cmd_scan(args, io.out, lang, home, env, http_factory)
+    if args.cmd == "radar":
+        return cmd_radar(args, io.out, lang, home, env)
     if args.cmd == "token":
         io.out(secrets.token_urlsafe(32))
         return 0

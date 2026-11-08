@@ -37,6 +37,7 @@ from rjh.liveness import (
     run_liveness_batch,
     utc_now,
 )
+from rjh.market_radar import add_skill_to_profile, analyze_market_radar
 
 ACTIVE_HOME = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else HUNTER_DIR
 PROFILE_PATH = ACTIVE_HOME / "profile.yaml" if (ACTIVE_HOME / "profile.yaml").exists() else HUNTER_DIR / "profile.yaml"
@@ -517,6 +518,52 @@ async def health_check():
         "sources_count": _count_configured_sources(),
         "active_profile": cv_profiler.get_active_profile().get("target_role") or cv_profiler.get_active_profile().get("title", "AI Automation Builder")
     }
+
+@app.get("/api/market-radar")
+def get_market_radar(min_score: float = 0.0, limit: int = 500):
+    global current_rjh_profile
+    prof_file = PROFILE_PATH if PROFILE_PATH.exists() else (HUNTER_DIR / "profile.example.yaml")
+    try:
+        current_rjh_profile = load_profile(prof_file)
+    except Exception:
+        pass
+    report = analyze_market_radar(
+        db_file=ACTIVE_DB,
+        profile=current_rjh_profile,
+        candidate_json_path=cv_profiler.PROFILE_PATH,
+        min_score=min_score,
+        limit=limit,
+    )
+    return report.to_dict()
+
+
+@app.post("/api/market-radar/add-keyword")
+def add_market_radar_keyword(payload: dict[str, Any]):
+    global current_rjh_profile
+    skill = str(payload.get("skill") or "").strip()
+    try:
+        weight = float(payload.get("weight", 6.0))
+    except (TypeError, ValueError):
+        weight = 6.0
+    if not skill:
+        raise HTTPException(status_code=400, detail="Le paramètre 'skill' est requis.")
+    prof_file = PROFILE_PATH if PROFILE_PATH.exists() else (HUNTER_DIR / "profile.yaml")
+    try:
+        res = add_skill_to_profile(
+            skill=skill,
+            profile_yaml_path=prof_file,
+            candidate_json_path=cv_profiler.PROFILE_PATH,
+            weight=weight,
+        )
+        if prof_file.exists():
+            current_rjh_profile = load_profile(prof_file)
+            manual_service.profile = current_rjh_profile
+        return {"success": True, **res}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Impossible de mettre à jour le profil : {e}")
+
 
 @app.get("/api/candidate-profile")
 async def get_candidate_profile():
