@@ -89,13 +89,17 @@ def sync_profile_yaml(profile: dict[str, Any], yaml_path: Path | None = None) ->
         data = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
         if not isinstance(data, dict):
             return
+        data.pop("name", None)
+        data.pop("headline", None)
+        ident = data.setdefault("identity", {})
+        if isinstance(ident, dict) and profile.get("name"):
+            ident["name"] = profile["name"]
         cand = data.setdefault("candidate", {})
-        if profile.get("name"):
-            cand["name"] = profile["name"]
-        if profile.get("target_role"):
-            cand["headline"] = profile["target_role"]
-        if profile.get("experience_summary"):
-            cand["summary"] = profile["experience_summary"]
+        if isinstance(cand, dict):
+            cand.pop("name", None)
+            cand.pop("headline", None)
+            if profile.get("experience_summary"):
+                cand["summary"] = profile["experience_summary"]
         target.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
     except Exception:
         pass
