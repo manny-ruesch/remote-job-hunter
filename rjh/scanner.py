@@ -536,7 +536,7 @@ def run_scan(
             )
             continue
         report.evaluated += 1
-        if tr.score >= profile.scoring.hot_threshold:
+        if tr.score >= profile.scoring.hot_threshold and not tr.gate:
             hot_jobs.append(job)
 
     dossier_results: dict[str, DossierResult] = {}
@@ -555,7 +555,7 @@ def run_scan(
         if dr is not None:
             dr.company = job.company
             dr.title = job.title
-        is_hot = tr.score >= profile.scoring.hot_threshold
+        is_hot = tr.score >= profile.scoring.hot_threshold and not tr.gate
         status = "hot" if is_hot else "screened"
         hook = dr.hook if dr else tr.why
         pitch = dr.pitch if dr else ""

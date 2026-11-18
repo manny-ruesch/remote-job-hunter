@@ -145,7 +145,8 @@ def profile_cv_with_gemini(cv_text: str) -> dict[str, Any]:
             if candidates:
                 parts = candidates[0].get("content", {}).get("parts", [])
                 if parts and "text" in parts[0]:
-                    profile = json.loads(parts[0]["text"])
+                    from rjh.jsonparse import parse_json_loose
+                    profile = parse_json_loose(parts[0]["text"])
                     # Save to candidate_profile.json
                     with open(PROFILE_PATH, "w", encoding="utf-8") as f:
                         json.dump(profile, f, indent=2, ensure_ascii=False)

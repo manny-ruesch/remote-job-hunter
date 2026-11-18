@@ -4,16 +4,7 @@ import json
 import os
 import sys
 from typing import Any
-from config import DISCORD_WEBHOOK_URL, DIGEST_PATH
-
-# Attempt to load bot token for interactive buttons
-DISCORD_BOT_TOKEN = None
-try:
-    sys.path.append(r".")
-    import config as gp_config
-    DISCORD_BOT_TOKEN = getattr(gp_config, "DISCORD_BOT_TOKEN", None)
-except Exception:
-    pass
+from config import DISCORD_WEBHOOK_URL, DIGEST_PATH, DISCORD_BOT_TOKEN, APPLICANT
 
 REMOTE_JOBS_CHANNEL_ID = "1554959776373280869"
 
@@ -149,9 +140,11 @@ def send_discord_alert(job: dict[str, Any]) -> bool:
     if DISCORD_WEBHOOK_URL:
         payload = {
             "username": "AI Job Hunter",
-            "avatar_url": "https://raw.githubusercontent.com/manny-ruesch/manny-ruesch.github.io/main/favicon-32.png",
             "embeds": [embed]
         }
+        avatar_url = os.getenv("DISCORD_AVATAR_URL", "")
+        if avatar_url:
+            payload["avatar_url"] = avatar_url
         try:
             req = urllib.request.Request(
                 DISCORD_WEBHOOK_URL,
@@ -167,9 +160,10 @@ def send_discord_alert(job: dict[str, Any]) -> bool:
 
 def append_to_markdown_digest(job: dict[str, Any]):
     exists = os.path.exists(DIGEST_PATH)
+    cand_name = APPLICANT.get("name", "Candidate")
     with open(DIGEST_PATH, "a", encoding="utf-8") as f:
         if not exists:
-            f.write("# 🎯 Hot Remote Opportunities for Alex Martin\n\n")
+            f.write(f"# 🎯 Hot Remote Opportunities for {cand_name}\n\n")
             f.write("*Auto-scouted and qualified by the Remote Job Hunter AI pipeline.*\n\n---\n\n")
             
         f.write(f"## [{job.get('fit_score', 0):.1f}/10] {job.get('company')} — {job.get('title')}\n\n")

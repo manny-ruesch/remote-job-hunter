@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-# Highly desirable roles & competencies for Alex
+# Highly desirable roles & competencies for the candidate
 HIGH_BOOST_KEYWORDS = [
     "automation", "agent", "solutions engineer", "forward deployed", "solution architect",
     "revops", "revenue operations", "ai ops", "workflow", "integration", "implementation engineer"

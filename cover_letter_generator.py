@@ -1,43 +1,156 @@
-import os
-import sys
+from __future__ import annotations
+
 import html
 import json
-import urllib.request
+import os
 import subprocess
+import sys
+import urllib.request
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent
-sys.path.append(str(BASE_DIR))
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
 
-import db
 import config
+import db
+from rjh.profile import Profile, load_profile
 
 EDGE_CANDIDATES = [
     Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
     Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
 ]
-DESKTOP_DIR = Path("E:/Users/Alex/Desktop") if Path("E:/Users/Alex/Desktop").exists() else Path.home() / "Desktop"
+DESKTOP_DIR = Path.home() / "Desktop"
 
-COVER_LETTER_SYSTEM_PROMPT = f"""You are an elite executive career advisor writing a bespoke cover letter for {config.APPLICANT['name']}.
+DEFAULT_APPLICANT: dict[str, Any] = {
+    "name": "Alex Dupont",
+    "title": "Automation & Systems Engineer · Operations & Data Workflows",
+    "location": "Remote (EU / CET) · Paris, France",
+    "email": "alex.dupont@example.org",
+    "phone": "+33 6 00 00 00 00",
+    "portfolio": "https://alex-dupont.example.org",
+    "linkedin": "https://linkedin.com/in/alex-dupont",
+    "github": "https://github.com/alex-dupont",
+    "key_metrics": "25+ automated workflows in production at Tech Solutions, ~200h/mo saved across operations",
+    "experience_highlight": (
+        "Specialist in process automation, API integrations, and production data pipelines "
+        "at Tech Solutions."
+    ),
+    "facts": [
+        "Designed and deployed 25+ automated workflows in production at Tech Solutions",
+        "Reduced manual operational coordination by ~200 hours per month",
+        "Engineered reliable CRM and webhook integrations with an 80% latency reduction",
+    ],
+}
+
+
+def _resolve_default_profile_path() -> Path:
+    rjh_home = os.environ.get("RJH_HOME")
+    if rjh_home:
+        candidate = Path(rjh_home).expanduser() / "profile.yaml"
+        if candidate.exists():
+            return candidate
+    return BASE_DIR / "profile.yaml"
+
+
+def load_applicant_profile(profile_source: "str | Path | Profile | dict[str, Any] | None" = None) -> dict[str, Any]:
+    """Charge les informations du candidat depuis profile.yaml (ou un objet Profile), avec repli générique."""
+    prof: Profile | None = None
+    if isinstance(profile_source, Profile):
+        prof = profile_source
+    elif isinstance(profile_source, dict):
+        try:
+            prof = load_profile(profile_source)
+        except Exception:
+            prof = None
+    else:
+        target_path = Path(profile_source) if profile_source is not None else _resolve_default_profile_path()
+        if target_path.exists():
+            try:
+                prof = load_profile(target_path)
+            except Exception:
+                prof = None
+
+    if prof is None:
+        return dict(DEFAULT_APPLICANT)
+
+    ident = prof.identity
+    cand = prof.candidate
+    search = prof.search
+
+    primary_titles = [t.strip() for t in (search.titles.primary or []) if t.strip()]
+    title = (
+        primary_titles[0].title()
+        if primary_titles
+        else DEFAULT_APPLICANT["title"]
+    )
+    facts = [f.strip() for f in (cand.facts or []) if f.strip()]
+    if not facts:
+        facts = list(DEFAULT_APPLICANT["facts"])
+
+    links = ident.links or {}
+    portfolio = (
+        links.get("portfolio")
+        or links.get("website")
+        or links.get("github")
+        or links.get("linkedin")
+        or DEFAULT_APPLICANT["portfolio"]
+    )
+
+    return {
+        "name": (ident.name or "").strip() or DEFAULT_APPLICANT["name"],
+        "title": title,
+        "location": (ident.city or "").strip() or DEFAULT_APPLICANT["location"],
+        "email": (ident.email or "").strip() or DEFAULT_APPLICANT["email"],
+        "phone": (ident.phone or "").strip() or DEFAULT_APPLICANT["phone"],
+        "portfolio": portfolio,
+        "linkedin": links.get("linkedin") or DEFAULT_APPLICANT["linkedin"],
+        "github": links.get("github") or DEFAULT_APPLICANT["github"],
+        "key_metrics": "; ".join(facts[:3]),
+        "experience_highlight": (cand.summary or "").strip() or DEFAULT_APPLICANT["experience_highlight"],
+        "facts": facts,
+    }
+
+
+def build_cover_letter_system_prompt(applicant: dict[str, Any] | None = None) -> str:
+    app = applicant or load_applicant_profile()
+    facts_list = app.get("facts") or [app.get("key_metrics", DEFAULT_APPLICANT["key_metrics"])]
+    facts_bullets = "\n".join(f"   - {f}" for f in facts_list[:5])
+
+    return f"""You are an elite executive career advisor writing a bespoke cover letter for {app['name']}.
 Applicant Profile:
-- Name: {config.APPLICANT['name']}
-- Title: {config.APPLICANT['title']}
-- Location: {config.APPLICANT['location']}
-- Email: {config.APPLICANT['email']} | Phone: {config.APPLICANT['phone']}
-- Portfolio: {config.APPLICANT['portfolio']}
-- Key Metrics: {config.APPLICANT['key_metrics']}
-- Experience: {config.APPLICANT['experience_highlight']}
+- Name: {app['name']}
+- Title: {app['title']}
+- Location: {app['location']}
+- Email: {app['email']} | Phone: {app['phone']}
+- Portfolio: {app['portfolio']}
+- Key Metrics: {app['key_metrics']}
+- Experience: {app['experience_highlight']}
 
 STRICT EDITORIAL STYLE GUIDELINES (NEVER VIOLATE THESE):
 1. NO "CODER / TERMINAL" VIBE: Absolutely zero bulleted technical cards, monospace jargon tags, or ticket-like syntax.
 2. EXECUTIVE EDITORIAL PROSE: Write in flowing, literary, confident, articulate paragraphs (similar to The Economist or Financial Times).
-3. STRATEGIC POSITIONING: Speak as a high-leverage operational partner to leadership, not a task-executing programmer. Connect technical capabilities to revenue velocity, customer retention, data integrity, and eliminating operational drag.
-4. PROVEN METRICS: Naturally weave in the 32+ production workflows, ~350 hours saved monthly, and ~720 operations automated at Acme Corp without sounding braggy.
+3. STRATEGIC POSITIONING: Speak as a high-leverage operational partner to leadership, not a task-executing programmer. Connect capabilities to measurable business outcomes, operational velocity, and reliability.
+4. PROVEN METRICS: Naturally weave in the candidate's verified achievements without sounding braggy:
+{facts_bullets}
 5. LENGTH: Exactly 4 to 5 concise, impactful paragraphs. Maximum 320 words total.
 6. Return strictly the body text of the letter (paragraphs only, starting with 'Dear [Company / Team]...').
 """
 
-def generate_cover_letter_text(company: str, title: str, description: str) -> str:
+
+COVER_LETTER_SYSTEM_PROMPT = build_cover_letter_system_prompt(DEFAULT_APPLICANT)
+
+
+def generate_cover_letter_text(
+    company: str,
+    title: str,
+    description: str,
+    applicant: dict[str, Any] | None = None,
+) -> str:
+    app_data = applicant or load_applicant_profile()
+    sys_prompt = build_cover_letter_system_prompt(app_data)
     model_name = config.GEMINI_MODEL if config.GEMINI_MODEL.startswith("gemini-") else f"gemini-{config.GEMINI_MODEL}"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
     prompt = f"""Write an executive editorial cover letter for:
@@ -48,7 +161,7 @@ JOB DESCRIPTION:
 """
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "systemInstruction": {"parts": [{"text": COVER_LETTER_SYSTEM_PROMPT}]}
+        "systemInstruction": {"parts": [{"text": sys_prompt}]}
     }
     req = urllib.request.Request(
         url,
@@ -67,17 +180,22 @@ JOB DESCRIPTION:
                 return parts[0].get("text", "").strip()
     return ""
 
-def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
+
+def create_cover_letter_pdf(
+    job_id: str,
+    profile_source: "str | Path | Profile | dict[str, Any] | None" = None,
+) -> tuple[bool, str, str]:
     job = db.get_job_by_id(job_id)
     if not job:
         return False, "Job not found", ""
 
+    applicant = load_applicant_profile(profile_source)
     company = job.get("company", "Company")
     title = job.get("title", "Job Title")
     desc = job.get("description", "")
 
     # Generate bespoke text
-    letter_text = generate_cover_letter_text(company, title, desc)
+    letter_text = generate_cover_letter_text(company, title, desc, applicant=applicant)
     if not letter_text:
         return False, "Failed to generate letter content", ""
 
@@ -90,14 +208,13 @@ def create_cover_letter_pdf(job_id: str) -> tuple[bool, str, str]:
     rest_paras = [html.escape(p) for p in paragraphs[1:]] if len(paragraphs) > 1 else []
     safe_comp_html = html.escape(company)
     safe_title_html = html.escape(title)
-    safe_name_html = html.escape(config.APPLICANT['name'])
-    safe_role_html = html.escape(config.APPLICANT['title'])
-    safe_loc_html = html.escape(config.APPLICANT['location'])
-    safe_phone_html = html.escape(config.APPLICANT['phone'])
-    safe_email_html = html.escape(config.APPLICANT['email'])
-    safe_port_html = html.escape(config.APPLICANT['portfolio'])
+    safe_name_html = html.escape(applicant['name'])
+    safe_role_html = html.escape(applicant['title'])
+    safe_loc_html = html.escape(applicant['location'])
+    safe_phone_html = html.escape(applicant['phone'])
+    safe_email_html = html.escape(applicant['email'])
+    safe_port_html = html.escape(applicant['portfolio'])
 
-    from datetime import datetime
     current_date = datetime.now().strftime("%B %Y")
 
     html_content = f"""<!DOCTYPE html>

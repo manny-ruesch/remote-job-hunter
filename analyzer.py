@@ -5,8 +5,10 @@ import urllib.error
 from typing import Any
 from config import GOOGLE_API_KEY, GEMINI_MODEL, APPLICANT
 
-SYSTEM_PROMPT = f"""You are an elite Tech Career Agent representing Alex Martin.
-Alex's profile:
+_CANDIDATE_NAME = APPLICANT.get("name", "the candidate")
+
+SYSTEM_PROMPT = f"""You are an elite Tech Career Agent representing {_CANDIDATE_NAME}.
+Candidate profile:
 - Title: {APPLICANT['title']}
 - Location: {APPLICANT['location']}
 - Languages: {APPLICANT['languages']}
@@ -15,15 +17,15 @@ Alex's profile:
 - Key Highlights: {APPLICANT['experience_highlight']}
 - Portfolio: {APPLICANT['portfolio']} | GitHub: {APPLICANT['github']}
 
-Your task is to analyze a remote job posting and evaluate its relevance for Alex.
+Your task is to analyze a remote job posting and evaluate its relevance for {_CANDIDATE_NAME}.
 
 Scoring criteria (BE RIGOROUS, PRAGMATIC AND ADVERSARIAL):
 - 9.0 - 10.0: IDEAL SWEET-SPOT (Junior to Mid Builder, Full-Time OR Part-Time/Contract). AI Automation Specialist, Solutions Engineer (Associate/Junior/Mid), Operations Automation Builder, RevOps Specialist, or Integration Specialist at a PME, startup, agency, or scale-up where the primary mission is connecting APIs, building n8n/Python pipelines, prompt chaining, and automating business workflows. Note: Part-Time (10-25h/week), Fractional, or Freelance contract roles in automation are highly valued!
-- 7.5 - 8.9: STRONG FIT. SMB / Scale-up roles in Operations, Growth, or Customer Technical Solutions where Alex's Acme Corp experience (saving 350h/mo with 32+ production n8n workflows) provides immediate, provable ROI from week 1.
+- 7.5 - 8.9: STRONG FIT. SMB / Scale-up roles in Operations, Growth, or Customer Technical Solutions where the candidate's production automation experience ({APPLICANT['key_metrics']}) provides immediate, provable ROI from week 1.
 - < 5.0: AUTOMATIC DISQUALIFICATION (HARD GATES):
-  * Seniority Mismatch: Any posting requiring 4+ or 5+ years of experience, or explicitly titled Senior / Staff / Principal / Lead / Director / Architect. Alex has ~2 years of high-velocity automation/building experience.
+  * Seniority Mismatch: Any posting requiring 4+ or 5+ years of experience, or explicitly titled Senior / Staff / Principal / Lead / Director / Architect. The candidate has ~2 years of high-velocity automation/building experience.
   * Frontier AI Lab Core Engineering (Anthropic, OpenAI, Cohere, DeepMind) demanding heavy computer science, distributed infrastructure, or model evaluations.
-  * Language Mismatch: If the job strictly requires "Native German" or "Fluent German" (Alex is French native, English C1, German basic).
+  * Language Mismatch: If the job strictly requires "Native German" or "Fluent German" ({APPLICANT['languages']}).
   * Travel / On-Site Requirement: If the job requires frequent travel (> 10%) or is not true 100% full-remote.
   * Pure "Software Engineer" / "Backend Engineer" focused on distributed systems, compilers, or heavy CS algorithms/LeetCode.
   * Research Scientist / Deep Learning Researcher.
@@ -32,10 +34,10 @@ Scoring criteria (BE RIGOROUS, PRAGMATIC AND ADVERSARIAL):
 Output strictly valid JSON with these keys:
 {{
   "fit_score": 8.5,
-  "rationale": "One-line explanation of why this matches Alex's skills.",
+  "rationale": "One-line explanation of why this matches the candidate's skills.",
   "tech_match": ["n8n", "Python", "LLMs", "REST APIs"],
-  "pitch_hook": "2 punchy sentences connecting Alex's real production work to this specific job's biggest need.",
-  "tailored_pitch": "A complete, high-converting 120-150 word application pitch written in professional English, citing the 32+ workflows in production, hours saved, and linking to his portfolio.",
+  "pitch_hook": "2 punchy sentences connecting the candidate's real production work to this specific job's biggest need.",
+  "tailored_pitch": "A complete, high-converting 120-150 word application pitch written in professional English, citing the production workflows, hours saved, and linking to the candidate's portfolio.",
   "proof_of_work": {{
     "problem_diagnosis": "Specific operational or technical bottleneck the company is hiring to solve.",
     "solution_architecture": "3 concrete technical implementation steps (Ingestion, LLM Validation/Guardrails, Action Delivery) using n8n, Python, and modern APIs.",
@@ -44,7 +46,7 @@ Output strictly valid JSON with these keys:
   "cold_outreach": {{
     "target_role": "Title of the hiring manager / decision maker (e.g. Head of Solutions Engineering, VP Ops, CTO)",
     "subject": "Punchy message subject line under 50 chars",
-    "dm_text": "A concise 50-70 word cold message to the decision maker bypassing the ATS, referencing their bottleneck, Alex's 32+ workflows / 350h saved, and linking to his portfolio.",
+    "dm_text": "A concise 50-70 word cold message to the decision maker bypassing the ATS, referencing their bottleneck, key metrics, and linking to the candidate's portfolio.",
     "linkedin_search_url": "https://www.google.com/search?q=site%3Alinkedin.com%2Fin+%22Company%22+%22Target+Role%22"
   }}
 }}
@@ -88,7 +90,8 @@ DESCRIPTION:
                     parts = candidates[0].get("content", {}).get("parts", [])
                     if parts and "text" in parts[0]:
                         raw_text = parts[0]["text"]
-                        res = json.loads(raw_text)
+                        from rjh.jsonparse import parse_json_loose
+                        res = parse_json_loose(raw_text)
                         res["analysis_status"] = "success"
                         return res
         except urllib.error.HTTPError as e:

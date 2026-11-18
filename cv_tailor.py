@@ -33,28 +33,30 @@ EDGE_CANDIDATES = [
     Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
     Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
 ]
-DESKTOP_DIR = Path("E:/Users/Alex/Desktop") if Path("E:/Users/Alex/Desktop").exists() else Path.home() / "Desktop"
+DESKTOP_DIR = Path.home() / "Desktop"
 TAILORED_DIR = BASE_DIR / "tailored_cvs"
 
-# Canonical truthful baseline for Alex Martin (never fabricated)
-BASELINE_CV = {
-    "name": "Alex Martin",
-    "default_headline": "Revenue Operations & AI Automation Engineer · GTM Systems & Workflows",
-    "email": "alex.martin@example.com",
+from rjh.profile import Profile, load_profile
+
+# Generic fallback baseline when profile.yaml is missing or incomplete
+BASELINE_CV: dict[str, Any] = {
+    "name": "Alex Dupont",
+    "default_headline": "Automation & Systems Engineer · Operations & Data Workflows",
+    "email": "alex.dupont@example.org",
     "phone": "+33 6 00 00 00 00",
-    "location": "Paris, France (Remote)",
-    "portfolio": "manny-ruesch.github.io",
-    "linkedin": "linkedin.com/in/alex-martin",
-    "github": "github.com/manny-ruesch",
+    "location": "Remote (EU / CET) · Paris, France",
+    "portfolio": "alex-dupont.example.org",
+    "linkedin": "linkedin.com/in/alex-dupont",
+    "github": "github.com/alex-dupont",
     "metrics": [
-        {"value": "32+ Workflows", "label": "Active in Production (n8n, Python & APIs)"},
-        {"value": "~350 Hours / mo", "label": "Manual Coordination Recovered"},
-        {"value": "~720 Ops / mo", "label": "High-Stakes CRM & Lead Ops Automated"},
-        {"value": "-85% Latency", "label": "Lead Qualification & Routing Speed"},
+        {"value": "25+ Workflows", "label": "Active in Production (Python & APIs)"},
+        {"value": "~200 Hours / mo", "label": "Manual Coordination Recovered"},
+        {"value": "~500 Ops / mo", "label": "CRM & Lead Operations Automated"},
+        {"value": "-80% Latency", "label": "Lead Qualification & Routing Speed"},
     ],
     "skill_categories": [
         {
-            "category": "Workflow & GTM Automation",
+            "category": "Workflow & Process Automation",
             "items": [
                 "n8n (Self-Hosted & Cloud)",
                 "Make (Integromat)",
@@ -84,7 +86,6 @@ BASELINE_CV = {
             "items": [
                 "HubSpot CRM",
                 "Salesforce Integration",
-                "onOffice CRM",
                 "PostgreSQL",
                 "SQL",
                 "NocoDB / Airtable",
@@ -106,110 +107,184 @@ BASELINE_CV = {
     ],
     "experience": [
         {
-            "company": "Acme Corp",
-            "role": "Revenue Operations & AI Automation (Digital Marketing & Systems)",
-            "dates": "Jan 2026 – Jul 2026",
-            "location": "Berlin, Germany",
+            "company": "Tech Solutions",
+            "role": "Automation & Revenue Operations Engineer",
+            "dates": "2024 – Present",
+            "location": "Paris, France (Remote)",
             "bullets": [
                 {
-                    "lead": "CRM & Workflow Automation Architecture (n8n & APIs)",
-                    "text": "Designed, deployed, and maintained <b>32+ mission-critical production workflows</b> bridging CRM (onOffice / HubSpot patterns), messaging channels, and SQL databases—recovering <b>~350 hours per month</b> across commercial and operations teams.",
+                    "lead": "CRM & Workflow Automation Architecture",
+                    "text": "Designed, deployed, and maintained <b>25+ mission-critical production workflows</b> bridging CRM platforms, messaging channels, and SQL databases—recovering <b>~200 hours per month</b> across commercial and operations teams.",
                     "tags": ["n8n", "crm", "hubspot", "workflow", "automation", "operations", "revops", "api", "sql"],
                 },
                 {
                     "lead": "Automated Lead Qualification, Enrichment & Routing",
-                    "text": "Engineered fault-tolerant webhook pipelines automating <b>~720 monthly business operations</b> across inbound lead capture, data enrichment, and cross-team routing, reducing lead-to-contact latency by <b>85%</b>.",
+                    "text": "Engineered fault-tolerant webhook pipelines automating <b>~500 monthly business operations</b> across inbound lead capture, data enrichment, and cross-team routing, reducing lead-to-contact latency by <b>80%</b>.",
                     "tags": ["webhook", "lead", "routing", "enrichment", "gtm", "sales", "revops", "data", "hubspot"],
                 },
                 {
                     "lead": "Generative AI & Structured Data Extraction Pipelines",
-                    "text": "Built production LLM pipelines (OpenAI API, Google Gemini) with strict JSON schema validation for automated document parsing, CRM hygiene, and multilingual asset generation (EN / FR / DE).",
+                    "text": "Built production LLM pipelines (OpenAI API, Google Gemini) with strict JSON schema validation for automated document parsing, CRM hygiene, and multilingual asset generation.",
                     "tags": ["ai", "llm", "openai", "gemini", "json", "python", "data", "extraction", "prompt"],
                 },
                 {
                     "lead": "Revenue Analytics, Attribution & Funnel Operations",
-                    "text": "Structured multi-touch attribution tracking and conversion funnel diagnostics via GA4, Search Console, and custom data dashboards to guide GTM capital allocation and organic growth.",
+                    "text": "Structured multi-touch attribution tracking and conversion funnel diagnostics via GA4, Search Console, and custom data dashboards to guide operational allocation.",
                     "tags": ["analytics", "ga4", "growth", "seo", "attribution", "funnel", "dashboard", "marketing"],
                 },
             ],
         },
         {
-            "company": "Automated Content & Media Pipeline",
-            "role": "Founder & Systems Architect — Production Deployments",
-            "dates": "Jan 2025 – Present",
+            "company": "Independent Systems & Data Consultant",
+            "role": "Automation Architect — Production Deployments",
+            "dates": "2022 – 2024",
             "location": "Remote (EU)",
             "bullets": [
                 {
-                    "lead": "Autonomous B2B GTM & Hiring Signal Intelligence Engine",
-                    "text": "Architected a multi-source Python &amp; SQLite WAL scouting and enrichment pipeline querying <b>50+ ATS APIs (Greenhouse, Lever, Ashby)</b> in parallel with 2-pass LLM scoring and automated outreach generation.",
+                    "lead": "Autonomous B2B Hiring & Signal Intelligence Engine",
+                    "text": "Architected a multi-source Python &amp; SQLite WAL scouting and enrichment pipeline querying <b>50+ ATS boards (Greenhouse, Lever, Ashby)</b> in parallel with 2-pass LLM scoring.",
                     "tags": ["python", "sqlite", "api", "enrichment", "b2b", "gtm", "ashby", "greenhouse", "lever", "llm"],
                 },
                 {
                     "lead": "Multi-Agent RAG & Knowledge Synchronization",
-                    "text": "Developed a bidirectional data synchronization engine connecting <b>Notion, Airtable, and PostgreSQL</b> with automated critic-judge verification to guarantee zero data drift across internal knowledge bases.",
+                    "text": "Developed a bidirectional data synchronization engine connecting <b>Notion, Airtable, and PostgreSQL</b> with automated verification to guarantee zero data drift.",
                     "tags": ["notion", "airtable", "postgresql", "rag", "sync", "agent", "database", "integration"],
                 },
                 {
                     "lead": "End-to-End API Distribution & Webhook Fulfillment",
-                    "text": "Engineered zero-click REST API publishing and webhook fulfillment pipelines orchestrating automated transactional workflows, schema validation, and real-time Discord/Slack alerting.",
+                    "text": "Engineered REST API publishing and webhook fulfillment pipelines orchestrating automated transactional workflows, schema validation, and real-time alerting.",
                     "tags": ["rest api", "webhook", "automation", "python", "discord", "slack", "integration", "ci/cd"],
                 },
-                {
-                    "lead": "Multimodal AI Processing Pipeline",
-                    "text": "Built an automated computer-vision and generative AI transformation pipeline delivering production-ready visual assets in <b>~33 seconds</b> at sub-cent inference cost.",
-                    "tags": ["ai", "vision", "pipeline", "automation", "cloud"],
-                },
-            ],
-        },
-        {
-            "company": "Retail Corp",
-            "role": "Operations & Student-Athlete Program Coordinator",
-            "dates": "Sep 2025 – Dec 2025",
-            "location": "Pau, France",
-            "bullets": [
-                {
-                    "lead": "Cross-Functional Operations & Reporting",
-                    "text": "Coordinated daily operational schedules and structured performance tracking and reporting workflows between coaching staff, academic leadership, and administration.",
-                    "tags": ["operations", "reporting", "coordination"],
-                }
-            ],
-        },
-        {
-            "company": "Athletic Center",
-            "role": "Retail Operations & CRM Intern",
-            "dates": "Apr 2024 – Jun 2024",
-            "location": "Pau, France",
-            "bullets": [
-                {
-                    "lead": "CRM Segmentation & Inventory Data Operations",
-                    "text": "Executed CRM customer segmentation, omnichannel inventory data tracking, and client lifecycle operations.",
-                    "tags": ["crm", "data", "inventory", "operations"],
-                }
             ],
         },
     ],
     "education": [
         {
-            "degree": "MSc in Finance, Data Analytics & Corporate Strategy",
-            "school": "Business School — Master in Management",
-            "dates": "2026 – 2028",
+            "degree": "MSc in Data Analytics, Systems & Corporate Strategy",
+            "school": "European School of Management & Technology",
+            "dates": "2020 – 2022",
             "detail": "Focus: Quantitative Modeling, Business Intelligence, Data Architecture & Operations",
         },
         {
-            "degree": "International Academic Exchange (Taught in English)",
-            "school": "University of Economics",
-            "dates": "Feb 2025 – Jun 2025",
-            "detail": "Coursework: Artificial Intelligence in Industry, Media Planning & Operations Management",
-        },
-        {
-            "degree": "Bachelor in Business, Marketing & Data Management",
-            "school": "High School — Scientific Baccalaureate",
-            "dates": "2023 – 2025",
-            "detail": "Specializations: Corporate Finance, Digital Marketing Automation & CRM Analytics",
+            "degree": "Bachelor in Computer Science & Business Management",
+            "school": "Université Paris-Saclay",
+            "dates": "2017 – 2020",
+            "detail": "Specializations: Software Engineering, Process Automation & Database Systems",
         },
     ],
-    "languages": "French (Native)  ·  English (C1 — Full Professional Proficiency)  ·  Spanish (B1 — Conversational)  ·  German (Elementary / Berlin work experience)",
+    "languages": "French (Native)  ·  English (C1 — Full Professional Proficiency)",
 }
+
+
+def _strip_scheme(url: str) -> str:
+    return re.sub(r"^https?://", "", (url or "").strip()).rstrip("/")
+
+
+def _resolve_default_profile_path() -> Path:
+    rjh_home = os.environ.get("RJH_HOME")
+    if rjh_home:
+        candidate = Path(rjh_home).expanduser() / "profile.yaml"
+        if candidate.exists():
+            return candidate
+    return BASE_DIR / "profile.yaml"
+
+
+def load_candidate_cv(
+    profile_path: "str | Path | Profile | dict[str, Any] | None" = None,
+) -> dict[str, Any]:
+    """
+    Construit la structure de CV à partir de profile.yaml (ou d'un objet Profile).
+    Si profile.yaml est absent ou incomplet, complète avec les valeurs génériques (Alex Dupont / Tech Solutions).
+    """
+    import copy
+
+    cv = copy.deepcopy(BASELINE_CV)
+    prof: Profile | None = None
+
+    if isinstance(profile_path, Profile):
+        prof = profile_path
+    elif isinstance(profile_path, dict):
+        try:
+            prof = load_profile(profile_path)
+        except Exception:
+            prof = None
+    else:
+        target = Path(profile_path) if profile_path is not None else _resolve_default_profile_path()
+        if target.exists():
+            try:
+                prof = load_profile(target)
+            except Exception:
+                prof = None
+
+    if prof is None:
+        return cv
+
+    ident = prof.identity
+    cand = prof.candidate
+    search = prof.search
+
+    if (ident.name or "").strip():
+        cv["name"] = ident.name.strip()
+    if (ident.email or "").strip():
+        cv["email"] = ident.email.strip()
+    if (ident.phone or "").strip():
+        cv["phone"] = ident.phone.strip()
+    if (ident.city or "").strip():
+        cv["location"] = ident.city.strip()
+
+    links = ident.links or {}
+    if links.get("portfolio") or links.get("website"):
+        cv["portfolio"] = _strip_scheme(links.get("portfolio") or links.get("website") or "")
+    if links.get("linkedin"):
+        cv["linkedin"] = _strip_scheme(links["linkedin"])
+    if links.get("github"):
+        cv["github"] = _strip_scheme(links["github"])
+
+    primary_titles = [t.strip() for t in (search.titles.primary or []) if t.strip()]
+    if primary_titles:
+        cv["default_headline"] = " · ".join(t.title() for t in primary_titles[:2])
+
+    boost_skills = [k.strip() for k in (search.keywords.boost or {}).keys() if k.strip()]
+    if boost_skills:
+        cv["skill_categories"][0]["items"] = boost_skills[:10]
+
+    spoken = search.languages.spoken or {}
+    if spoken:
+        cv["languages"] = "  ·  ".join(f"{lang.upper()} ({lvl})" for lang, lvl in spoken.items())
+
+    facts = [f.strip() for f in (cand.facts or []) if f.strip()]
+    if facts:
+        cv["facts"] = facts
+        exp_bullets = []
+        for idx, fact in enumerate(facts[:6]):
+            tokens = [t.lower() for t in re.findall(r"[A-Za-z0-9+#.-]{2,}", fact)]
+            exp_bullets.append(
+                {
+                    "lead": f"Key Achievement #{idx + 1}",
+                    "text": html.escape(fact),
+                    "tags": tokens[:10],
+                }
+            )
+        cv["experience"] = [
+            {
+                "company": "Core Track Record & Production Impact",
+                "role": cv["default_headline"],
+                "dates": "Recent",
+                "location": cv["location"],
+                "bullets": exp_bullets,
+            }
+        ]
+    else:
+        cv["facts"] = [
+            "25+ automated workflows deployed in production at Tech Solutions",
+            "~200 hours/month of manual coordination recovered",
+            "~500 monthly operations automated with an 80% latency reduction",
+        ]
+
+    if (cand.summary or "").strip():
+        cv["summary_override"] = cand.summary.strip()
+
+    return cv
 
 KNOWN_ATS_KEYWORDS = [
     ("n8n", "n8n"),
@@ -294,8 +369,13 @@ def extract_job_keywords(job: dict[str, Any]) -> list[str]:
     return matched[:14]
 
 
-def build_deterministic_tailoring(job: dict[str, Any], matched_keywords: list[str]) -> dict[str, Any]:
-    """Adaptation déterministe 100% fidèle aux faits réels (utilisée hors-ligne ou en secours)."""
+def build_deterministic_tailoring(
+    job: dict[str, Any],
+    matched_keywords: list[str],
+    cv: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Adaptation déterministe 100% fidèle aux faits réels du profil chargé (utilisée hors-ligne ou en secours)."""
+    active_cv = cv or load_candidate_cv()
     raw_title = (job.get("title") or "").strip()
     company = (job.get("company") or "Target Company").strip()
 
@@ -303,29 +383,43 @@ def build_deterministic_tailoring(job: dict[str, Any], matched_keywords: list[st
     clean_job_title = re.sub(r"\s*\([^)]*\)\s*", " ", raw_title)
     clean_job_title = re.sub(r"\s*[-–—|]\s*(remote|full[- ]time|europe|emea|h/f|m/f/d|f/m/x).*", "", clean_job_title, flags=re.I).strip()
     if not clean_job_title or len(clean_job_title) > 58:
-        headline = BASELINE_CV["default_headline"]
+        headline = active_cv["default_headline"]
     else:
-        headline = f"{clean_job_title} · AI Automation & Revenue Systems"
+        headline = f"{clean_job_title} · {active_cv['default_headline'].split('·')[-1].strip()}"
 
     top_kw_str = ", ".join(matched_keywords[:6])
-    summary = (
-        f"Results-driven <b>{html.escape(clean_job_title or 'Revenue Operations & AI Automation Engineer')}</b> "
-        f"specializing in CRM architecture, workflow orchestration, and production AI pipelines ({html.escape(top_kw_str)}). "
-        f"Proven track record at Acme Corp unifying <b>32+ mission-critical production workflows</b>, "
-        f"recovering <b>~350 hours/month</b> of manual coordination, and automating <b>~720 monthly commercial operations</b> "
-        f"with an <b>85% reduction</b> in lead routing latency. Ready to scale fault-tolerant GTM &amp; operational systems for <b>{html.escape(company)}</b>."
-    )
+    primary_exp = (active_cv.get("experience") or [{}])[0]
+    primary_company = primary_exp.get("company") or "Tech Solutions"
+    facts_list = active_cv.get("facts") or [
+        "25+ automated workflows in production",
+        "~200 hours/month of manual coordination saved",
+    ]
+    fact_snippet = "; ".join(html.escape(f) for f in facts_list[:2])
+    base_summary = active_cv.get("summary_override")
+    if base_summary:
+        summary = (
+            f"{html.escape(base_summary)} "
+            f"Core stack: <b>{html.escape(top_kw_str)}</b>. "
+            f"Proven impact: {fact_snippet}. "
+            f"Ready to scale reliable systems for <b>{html.escape(company)}</b>."
+        )
+    else:
+        summary = (
+            f"Results-driven <b>{html.escape(clean_job_title or active_cv['default_headline'])}</b> "
+            f"specializing in process automation, systems integration, and data pipelines ({html.escape(top_kw_str)}). "
+            f"Proven track record at <b>{html.escape(primary_company)}</b> ({fact_snippet}). "
+            f"Ready to scale fault-tolerant operational systems for <b>{html.escape(company)}</b>."
+        )
 
     # Score & sort bullets under each role by keyword overlap with the target job
     corpus_tokens = set(re.findall(r"[a-z0-9]+", (raw_title + " " + " ".join(matched_keywords) + " " + str(job.get("description_snippet") or "")).lower()))
     tailored_experience = []
-    for idx, exp in enumerate(BASELINE_CV["experience"]):
+    for idx, exp in enumerate(active_cv["experience"]):
         bullets = list(exp["bullets"])
         bullets.sort(
             key=lambda b: sum(1 for t in b.get("tags", []) if t in corpus_tokens or any(t in kw.lower() for kw in matched_keywords)),
             reverse=True,
         )
-        # Keep top 4 bullets for Acme Corp, top 3 most relevant for Independent Builder, 1 for earlier roles
         max_b = 4 if idx == 0 else (3 if idx == 1 else 1)
         tailored_experience.append({**exp, "bullets": bullets[:max_b]})
 
@@ -338,18 +432,27 @@ def build_deterministic_tailoring(job: dict[str, Any], matched_keywords: list[st
     }
 
 
-def refine_tailoring_with_llm(job: dict[str, Any], base_plan: dict[str, Any]) -> dict[str, Any]:
+def refine_tailoring_with_llm(
+    job: dict[str, Any],
+    base_plan: dict[str, Any],
+    cv: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Si GOOGLE_API_KEY est configurée, affine le titre et le résumé exécutif via Gemini (sans jamais inventer de faits)."""
     if not config.GOOGLE_API_KEY:
         return base_plan
 
+    active_cv = cv or load_candidate_cv()
     company = job.get("company") or "Target Company"
     title = job.get("title") or "Automation Engineer"
     desc = (job.get("description_snippet") or "")[:1800]
     kws = ", ".join(base_plan["matched_keywords"])
+    cand_name = active_cv.get("name", "Alex Dupont")
+    facts_lines = "\n".join(f"   - {f}" for f in (active_cv.get("facts") or [])[:5])
+    if not facts_lines:
+        facts_lines = f"   - Proven track record at {(active_cv.get('experience') or [{}])[0].get('company', 'Tech Solutions')}."
 
     prompt = f"""You are an elite Executive Resume Strategist and ATS Optimization Specialist.
-Tailor the headline and 3-sentence executive summary of Alex Martin's resume for this specific role:
+Tailor the headline and 3-sentence executive summary of {cand_name}'s resume for this specific role:
 - Target Company: {company}
 - Target Role: {title}
 - Matched ATS Keywords to include naturally: {kws}
@@ -357,11 +460,9 @@ Tailor the headline and 3-sentence executive summary of Alex Martin's resume for
 
 STRICT TRUTHFULNESS RULES (NEVER VIOLATE):
 1. NEVER invent employers, degrees, certifications, or metrics.
-2. Ground all claims strictly in Alex's verified facts:
-   - 32+ production workflows (n8n, Python, REST APIs, webhooks) deployed at Acme Corp (Berlin).
-   - ~350 hours/month of manual coordination saved.
-   - ~720 high-stakes monthly operations automated across CRM, lead qualification, enrichment, and routing (-85% latency).
-   - Fluent in English (C1) and French (Native).
+2. Ground all claims strictly in {cand_name}'s verified facts:
+{facts_lines}
+   - Languages: {active_cv.get('languages', 'French, English')}.
 3. Return ONLY valid JSON with keys:
    - "headline": string (max 75 chars, mirroring the target role title + core specialty)
    - "summary": string (3 concise sentences, plain text with <b>...</b> around 3-4 key metrics/terms, max 460 chars)
@@ -380,7 +481,8 @@ STRICT TRUTHFULNESS RULES (NEVER VIOLATE):
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        parsed = json.loads(raw_text)
+        from rjh.jsonparse import parse_json_loose
+        parsed = parse_json_loose(raw_text)
         headline = (parsed.get("headline") or "").strip()
         summary = (parsed.get("summary") or "").strip()
         if headline and summary:
@@ -394,13 +496,17 @@ STRICT TRUTHFULNESS RULES (NEVER VIOLATE):
     return base_plan
 
 
-def render_ats_cv_html(job: dict[str, Any], plan: dict[str, Any]) -> str:
+def render_ats_cv_html(
+    job: dict[str, Any],
+    plan: dict[str, Any],
+    cv: dict[str, Any] | None = None,
+) -> str:
     """
     Génère le document HTML 1 page A4 :
     - Esthétique 'Editorial Warm Luxury' (Newsreader + Plus Jakarta Sans + Inter, #1A1715, #8C5332, #FAF8F5)
     - Architecture 100 % linéaire mono-colonne (zéro entrelacement horizontal dans les parseurs ATS)
     """
-    cv = BASELINE_CV
+    cv = cv or load_candidate_cv()
     matched_lower = {k.lower() for k in plan["matched_keywords"]}
 
     # Merge any extra matched keywords from the job across the categories so 100% of matched keywords are in the ATS text layer
@@ -850,13 +956,19 @@ def render_ats_cv_html(job: dict[str, Any], plan: dict[str, Any]) -> str:
 </html>"""
 
 
-def audit_ats_pdf(pdf_path: Path, html_content: str, matched_keywords: list[str]) -> dict[str, Any]:
+def audit_ats_pdf(
+    pdf_path: Path,
+    html_content: str,
+    matched_keywords: list[str],
+    cv: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Vérifie déterministiquement le PDF généré :
     1. Nombre de pages strictement égal à 1 (/Type /Page).
     2. Présence des sections standards ATS dans l'ordre linéaire.
     3. Présence des coordonnées et des mots-clés cibles de l'offre.
     """
+    active_cv = cv or load_candidate_cv()
     raw_bytes = pdf_path.read_bytes()
     page_count = raw_bytes.count(b"/Type /Page") - raw_bytes.count(b"/Type /Pages")
     if page_count <= 0:
@@ -881,11 +993,19 @@ def audit_ats_pdf(pdf_path: Path, html_content: str, matched_keywords: list[str]
     present_kw = [kw for kw in matched_keywords if kw.lower() in plain_lower]
     kw_ratio = round((len(present_kw) / max(1, len(matched_keywords))) * 100)
 
+    expected_contacts = [
+        active_cv.get("email", "").lower(),
+        active_cv.get("phone", "").lower(),
+        active_cv.get("linkedin", "").lower(),
+        active_cv.get("github", "").lower(),
+    ]
+    expected_contacts = [c for c in expected_contacts if c]
+
     checks = [
         {"id": "one_page", "label": "Strictement 1 page A4 (aucun débordement)", "ok": page_count == 1},
         {"id": "single_column", "label": "Flux linéaire 1 colonne (Workday / Greenhouse / Lever / Ashby)", "ok": linear_order_ok},
         {"id": "standard_headings", "label": "Sections standards ATS détectées dans l'ordre", "ok": sections_present},
-        {"id": "contact_parseable", "label": "Email, téléphone, LinkedIn, GitHub & Portfolio extractibles", "ok": all(x in plain_lower for x in ("alex.martin@example.com", "+33 6 00 00 00 00", "linkedin.com/in/alex-martin", "github.com/manny-ruesch"))},
+        {"id": "contact_parseable", "label": "Email, téléphone, LinkedIn, GitHub & Portfolio extractibles", "ok": all(x in plain_lower for x in expected_contacts)},
     ]
     ats_score = min(100, int(kw_ratio * 0.6 + (40 if all(c["ok"] for c in checks) else 25)))
 
@@ -927,31 +1047,40 @@ def render_html_to_pdf(html_path: Path, pdf_path: Path) -> tuple[bool, str]:
         return False, f"Aucun moteur PDF disponible ({exc})"
 
 
-def create_tailored_cv_pdf(job_id: str, sync_active_cv: bool = True) -> tuple[bool, dict[str, Any]]:
+def create_tailored_cv_pdf(
+    job_id: str,
+    sync_active_cv: bool = True,
+    profile_path: "str | Path | Profile | dict[str, Any] | None" = None,
+) -> tuple[bool, dict[str, Any]]:
     """
     Génère un CV 1 page A4 sur-mesure pour l'offre `job_id`, optimisé recruteur + ATS.
     Sauvegarde :
-    - Dans `tailored_cvs/CV_Candidate_{Company}.pdf` (et `.html` source)
-    - Sur le Bureau (`E:/Users/Alex/Desktop/CV_Candidate_{Company}.pdf`)
+    - Dans `tailored_cvs/CV_{Candidate}_{Company}.pdf` (et `.html` source)
+    - Sur le Bureau (`~/Desktop/CV_{Candidate}_{Company}.pdf`)
     - Dans `uploaded_cv.pdf` (si `sync_active_cv=True`) pour l'Auto-Fill Playwright en 1 clic.
     """
     job = db.get_job_by_id(job_id)
     if not job:
         return False, {"error": f"Offre introuvable : {job_id}"}
 
+    cv_data = load_candidate_cv(profile_path)
     matched_keywords = extract_job_keywords(job)
-    plan = build_deterministic_tailoring(job, matched_keywords)
-    plan = refine_tailoring_with_llm(job, plan)
+    plan = build_deterministic_tailoring(job, matched_keywords, cv=cv_data)
+    plan = refine_tailoring_with_llm(job, plan, cv=cv_data)
 
-    html_content = render_ats_cv_html(job, plan)
+    html_content = render_ats_cv_html(job, plan, cv=cv_data)
 
     TAILORED_DIR.mkdir(parents=True, exist_ok=True)
     safe_company = "".join(c for c in (job.get("company") or "Company") if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_")
     if not safe_company:
         safe_company = "Company"
 
-    filename = f"CV_Candidate_{safe_company}.pdf"
-    html_path = TAILORED_DIR / f"CV_Candidate_{safe_company}.html"
+    safe_cand = "".join(c for c in (cv_data.get("name") or "Candidate") if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_")
+    if not safe_cand:
+        safe_cand = "Candidate"
+
+    filename = f"CV_{safe_cand}_{safe_company}.pdf"
+    html_path = TAILORED_DIR / f"CV_{safe_cand}_{safe_company}.html"
     pdf_path = TAILORED_DIR / filename
     desktop_pdf_path = DESKTOP_DIR / filename
 
@@ -975,7 +1104,7 @@ def create_tailored_cv_pdf(job_id: str, sync_active_cv: bool = True) -> tuple[bo
         except Exception:
             pass
 
-    audit = audit_ats_pdf(pdf_path, html_content, plan["matched_keywords"])
+    audit = audit_ats_pdf(pdf_path, html_content, plan["matched_keywords"], cv=cv_data)
     audit["headline"] = plan["headline"]
     audit["tailoring_mode"] = plan["tailoring_mode"]
 

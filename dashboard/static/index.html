@@ -2425,6 +2425,34 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
+    const escapeHtml = esc;
+
+    function safeUrl(raw) {
+      if (!raw) return '';
+      const str = String(raw).trim();
+      try {
+        const parsed = new URL(str, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+          return parsed.href;
+        }
+      } catch (e) {}
+      return '';
+    }
+
+    function copyReferralDraft(btnOrText) {
+      let draft = '';
+      if (btnOrText && typeof btnOrText === 'object' && btnOrText.getAttribute) {
+        draft = btnOrText.getAttribute('data-referral-draft') || '';
+      } else {
+        draft = decodeURIComponent(String(btnOrText || ''));
+      }
+      if (!draft) return;
+      navigator.clipboard.writeText(draft).then(() => {
+        showToast("Message de cooptation copié !");
+      }).catch(() => {
+        showToast("Erreur lors de la copie.");
+      });
+    }
 
     // ========================================================
     // GESTION DES VUES (CARTES / TABLEAU / KANBAN)
@@ -2577,11 +2605,11 @@
 
             <div class="job-footer">
               <div class="action-group">
-                <button class="btn" onclick="event.stopPropagation(); viewJobDetail('${esc(j.id)}')">Détails</button>
-                <button class="btn btn-primary" onclick="event.stopPropagation(); triggerAutoFill('${esc(j.id)}')">Pré-remplir</button>
-                ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" rel="noopener" class="btn" onclick="event.stopPropagation();" title="Ouvrir l'offre originale">↗</a>` : ''}
+                <button class="btn" onclick="event.stopPropagation(); viewJobDetail('${encodeURIComponent(j.id)}')">Détails</button>
+                <button class="btn btn-primary" onclick="event.stopPropagation(); triggerAutoFill('${encodeURIComponent(j.id)}')">Pré-remplir</button>
+                ${safeUrl(j.url) ? `<a href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener" class="btn" onclick="event.stopPropagation();" title="Ouvrir l'offre originale">↗</a>` : ''}
               </div>
-              <select class="status-select" onclick="event.stopPropagation();" onchange="updateJobStatus('${esc(j.id)}', this.value)">
+              <select class="status-select" onclick="event.stopPropagation();" onchange="updateJobStatus('${encodeURIComponent(j.id)}', this.value)">
                 <option value="hot" ${j.status === 'hot' || j.status === 'new' ? 'selected' : ''}>À traiter</option>
                 <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>Postulé</option>
                 <option value="interview" ${j.status === 'interview' ? 'selected' : ''}>Entretien</option>
@@ -2623,7 +2651,7 @@
         const contractLabel = j.job_type === 'part_time' ? 'Temps partiel' : (j.job_type === 'contract' ? 'Freelance' : 'Temps plein');
 
         return `
-          <tr onclick="selectJobByIndex(${idx}); viewJobDetail('${esc(j.id)}')" style="cursor: pointer;">
+          <tr onclick="selectJobByIndex(${idx}); viewJobDetail('${encodeURIComponent(j.id)}')" style="cursor: pointer;">
             <td style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; color: ${j.fit_score >= 8.5 ? 'var(--brand-red)' : (j.fit_score >= 7.5 ? 'var(--color-emerald)' : 'var(--text-muted)')};">${score}</td>
             <td style="font-weight: 600;">${esc(j.company)}</td>
             <td style="font-weight: 500;">${esc(j.title)}</td>
@@ -2632,12 +2660,12 @@
             <td style="color: var(--text-muted); font-size: 12px;">${esc(tech)}</td>
             <td onclick="event.stopPropagation();">
               <div style="display: flex; gap: 6px;">
-                <button class="btn" style="height: 26px; padding: 0 8px; font-size: 11.5px;" onclick="triggerAutoFill('${esc(j.id)}')">Pré-remplir</button>
-                ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" rel="noopener" class="btn" style="height: 26px; padding: 0 7px; font-size: 11.5px;">↗</a>` : ''}
+                <button class="btn" style="height: 26px; padding: 0 8px; font-size: 11.5px;" onclick="triggerAutoFill('${encodeURIComponent(j.id)}')">Pré-remplir</button>
+                ${safeUrl(j.url) ? `<a href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener" class="btn" style="height: 26px; padding: 0 7px; font-size: 11.5px;">↗</a>` : ''}
               </div>
             </td>
             <td onclick="event.stopPropagation();">
-              <select class="status-select" style="height: 26px; font-size: 11.5px;" onchange="updateJobStatus('${esc(j.id)}', this.value)">
+              <select class="status-select" style="height: 26px; font-size: 11.5px;" onchange="updateJobStatus('${encodeURIComponent(j.id)}', this.value)">
                 <option value="hot" ${j.status === 'hot' || j.status === 'new' ? 'selected' : ''}>À traiter</option>
                 <option value="applied" ${j.status === 'applied' ? 'selected' : ''}>Postulé</option>
                 <option value="interview" ${j.status === 'interview' ? 'selected' : ''}>Entretien</option>
@@ -2676,7 +2704,7 @@
               }
             }
             return `
-            <div class="job-card" style="padding: 12px 14px; gap: 8px; cursor: pointer;" onclick="viewJobDetail('${esc(j.id)}')">
+            <div class="job-card" style="padding: 12px 14px; gap: 8px; cursor: pointer;" onclick="viewJobDetail('${encodeURIComponent(j.id)}')">
               <div style="display: flex; justify-content: space-between; align-items: baseline;">
                 <span class="job-company">${esc(j.company)}</span>
                 <span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 11.5px; color: var(--text-muted);">${j.fit_score ? j.fit_score.toFixed(1) : '0.0'}</span>
@@ -2685,7 +2713,7 @@
               ${fuBadge ? `<div style="display: flex; flex-wrap: wrap; gap: 4px;">${fuBadge}</div>` : ''}
               <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
                 <span style="font-size: 11px; color: var(--text-muted);">${esc(j.source || 'Direct')}</span>
-                <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick="event.stopPropagation(); triggerAutoFill('${esc(j.id)}')">Pré-remplir</button>
+                <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick="event.stopPropagation(); triggerAutoFill('${encodeURIComponent(j.id)}')">Pré-remplir</button>
               </div>
             </div>
           `;
@@ -2718,8 +2746,9 @@
     // MODALE DE DÉTAIL D'OFFRE (4 ONGLETS + STUDIO CV ATS)
     // ========================================================
     async function viewJobDetail(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       try {
-        const res = await fetch(`/api/jobs/${jobId}`);
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
         const j = await res.json();
         currentModalJob = j;
 
@@ -2729,11 +2758,11 @@
         document.getElementById('modal-meta').textContent = `${j.location || 'Remote'} · ${cleanSource} · Pertinence : ${j.fit_score ? j.fit_score.toFixed(1) : '0.0'}/10`;
 
         document.getElementById('modal-action-bar').innerHTML = `
-          <button class="btn btn-primary" onclick="triggerAutoFill('${esc(j.id)}')">Pré-remplir la candidature</button>
-          <button class="btn" onclick="quickGenerateTailoredCV('${esc(j.id)}')">Adapter mon CV (ATS)</button>
-          <button class="btn" onclick="quickGenerateCoverLetter('${esc(j.id)}')">Lettre de motivation PDF</button>
-          <button class="btn" onclick="checkSingleLiveness('${esc(j.id)}')">Vérifier l'offre</button>
-          ${j.url ? `<a href="${encodeURI(j.url)}" target="_blank" rel="noopener" class="btn">Voir l'offre originale ↗</a>` : ''}
+          <button class="btn btn-primary" onclick="triggerAutoFill('${encodeURIComponent(j.id)}')">Pré-remplir la candidature</button>
+          <button class="btn" onclick="quickGenerateTailoredCV('${encodeURIComponent(j.id)}')">Adapter mon CV (ATS)</button>
+          <button class="btn" onclick="quickGenerateCoverLetter('${encodeURIComponent(j.id)}')">Lettre de motivation PDF</button>
+          <button class="btn" onclick="checkSingleLiveness('${encodeURIComponent(j.id)}')">Vérifier l'offre</button>
+          ${safeUrl(j.url) ? `<a href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener" class="btn">Voir l'offre originale ↗</a>` : ''}
         `;
 
         const fu = j.followup || {};
@@ -2745,7 +2774,7 @@
               </span>
               <div style="display: flex; gap: 6px;">
                 <button class="btn" style="height: 26px; font-size: 11.5px;" onclick="copyFollowupDraft()">Copier la relance</button>
-                <button class="btn btn-primary" style="height: 26px; font-size: 11.5px;" onclick="markFollowupSent('${esc(j.id)}')">Marquer relancée (+7j)</button>
+                <button class="btn btn-primary" style="height: 26px; font-size: 11.5px;" onclick="markFollowupSent('${encodeURIComponent(j.id)}')">Marquer relancée (+7j)</button>
               </div>
             </div>
             <div class="prose-box" id="modal-followup-draft" style="font-size: 12.5px;">${esc(fu.suggested_message)}</div>
@@ -2755,7 +2784,7 @@
         document.getElementById('tab-pitch').innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Argumentaire personnalisé pour ${esc(j.company)}</div>
-            <button class="btn" style="height: 28px;" onclick="copyPitchAction('${esc(j.id)}')">Copier</button>
+            <button class="btn" style="height: 28px;" onclick="copyPitchAction('${encodeURIComponent(j.id)}')">Copier</button>
           </div>
           <div class="prose-box">${esc(j.tailored_pitch || 'Aucun contenu généré pour cette offre.')}</div>
           ${followupBoxHtml}
@@ -2782,7 +2811,7 @@
             <div class="prose-box" id="modal-cold-dm">${esc(cold.dm_text || 'Aucun contenu généré pour cette offre.')}</div>
             <div style="margin-top: 12px; display: flex; gap: 8px;">
               <button class="btn btn-primary" onclick="copyColdFromModal()">Copier le message</button>
-              ${cold.linkedin_search_url ? `<a href="${encodeURI(cold.linkedin_search_url)}" target="_blank" rel="noopener" class="btn">Rechercher sur LinkedIn ↗</a>` : ''}
+              ${safeUrl(cold.linkedin_search_url) ? `<a href="${esc(safeUrl(cold.linkedin_search_url))}" target="_blank" rel="noopener" class="btn">Rechercher sur LinkedIn ↗</a>` : ''}
             </div>
           `;
         } else {
@@ -2797,7 +2826,7 @@
                   <div style="color: var(--text); font-weight: 600; font-size: 13.5px;">CV sur-mesure (Optimisé recruteur &amp; 100 % compatible ATS)</div>
                   <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Format 1 page A4 · Flux linéaire 1 colonne (Workday, Greenhouse, Lever, Ashby) · Style Editorial Warm Luxury</div>
                 </div>
-                <button class="btn btn-primary" onclick="quickGenerateTailoredCV('${esc(j.id)}')">Adapter mon CV pour ${esc(j.company)}</button>
+                <button class="btn btn-primary" onclick="quickGenerateTailoredCV('${encodeURIComponent(j.id)}')">Adapter mon CV pour ${esc(j.company)}</button>
               </div>
               <div id="tailored-cv-status" style="margin-top: 10px; font-size: 12px;"></div>
             </div>
@@ -2808,7 +2837,7 @@
                   <div style="color: var(--text); font-weight: 600; font-size: 13.5px;">Lettre de motivation exécutive (PDF)</div>
                   <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Prose éditoriale ciblée sur les enjeux opérationnels de ${esc(j.company)} · Rendu vectoriel A4</div>
                 </div>
-                <button class="btn" onclick="quickGenerateCoverLetter('${esc(j.id)}')">Générer la lettre PDF</button>
+                <button class="btn" onclick="quickGenerateCoverLetter('${encodeURIComponent(j.id)}')">Générer la lettre PDF</button>
               </div>
               <div id="cover-letter-status" style="margin-top: 10px; font-size: 12px;"></div>
             </div>
@@ -2853,12 +2882,13 @@
     }
 
     async function quickGenerateTailoredCV(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       showToast('Adaptation du CV ATS en cours...');
       switchModalTab('cover');
       const box = document.getElementById('tailored-cv-status');
       if (box) box.innerHTML = `<div style="color: var(--text-muted);">Alignement des mots-clés ATS, tri des réalisations et compilation PDF A4...</div>`;
       try {
-        const res = await fetch(`/api/jobs/${jobId}/generate-cv`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/generate-cv`, { method: 'POST' });
         const d = await res.json();
         if (d.success) {
           showToast(`CV ATS généré : ${d.filename}`);
@@ -2908,12 +2938,13 @@
     }
 
     async function quickGenerateCoverLetter(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       showToast('Génération de la lettre PDF...');
       switchModalTab('cover');
       const box = document.getElementById('cover-letter-status');
       if (box) box.innerHTML = `<div style="color: var(--text-muted);">Rédaction éditoriale et compilation PDF A4 en cours...</div>`;
       try {
-        const res = await fetch(`/api/jobs/${jobId}/generate-cover-letter`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/generate-cover-letter`, { method: 'POST' });
         const d = await res.json();
         if (d.success) {
           showToast(`Lettre PDF générée : ${d.filename}`);
@@ -2933,20 +2964,22 @@
     }
 
     async function triggerAutoFill(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       showToast("Ouverture de l'assistant de remplissage...");
       try {
-        const res = await fetch(`/api/jobs/${jobId}/auto-fill`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/auto-fill`, { method: 'POST' });
         const d = await res.json();
         showToast(d.message || "Assistant lancé");
       } catch (e) { showToast("Impossible de lancer l'assistant de remplissage"); }
     }
 
     async function copyPitchAction(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       try {
         if (currentModalJob && currentModalJob.tailored_pitch) {
           await navigator.clipboard.writeText(currentModalJob.tailored_pitch);
         } else {
-          await fetch(`/api/jobs/${jobId}/copy-pitch`, { method: 'POST' });
+          await fetch(`/api/jobs/${encodeURIComponent(jobId)}/copy-pitch`, { method: 'POST' });
         }
         showToast('Copié dans le presse-papiers');
       } catch (e) { showToast('Impossible de copier le texte'); }
@@ -2984,9 +3017,10 @@
     }
 
     async function checkSingleLiveness(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       showToast("Vérification de l'offre en cours...");
       try {
-        const res = await fetch(`/api/jobs/${jobId}/check-liveness`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/check-liveness`, { method: 'POST' });
         const d = await res.json();
         if (d.status === 'active') {
           showToast(`Offre active : ${d.reason}`);
@@ -3026,8 +3060,9 @@
     }
 
     async function markFollowupSent(jobId) {
+      jobId = decodeURIComponent(String(jobId || ''));
       try {
-        const res = await fetch(`/api/jobs/${jobId}/followup-sent`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/followup-sent`, { method: 'POST' });
         const d = await res.json();
         if (d.success) {
           showToast("Relance enregistrée · Prochain rappel dans 7 jours");
@@ -3040,8 +3075,9 @@
     }
 
     async function updateJobStatus(jobId, status) {
+      jobId = decodeURIComponent(String(jobId || ''));
       try {
-        await fetch(`/api/jobs/${jobId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+        await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
         showToast(`Statut mis à jour : ${status}`);
         loadStats();
         loadJobs();
@@ -3419,8 +3455,8 @@
                   Contact : <strong style="color: var(--text);">${escapeHtml(firstContact.full_name || '')}</strong> (${escapeHtml(firstContact.position || 'Employé')})
                 </div>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                  <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" onclick='navigator.clipboard.writeText(${JSON.stringify(firstContact.referral_draft || "")}); showToast("Message de cooptation copié !");'>Copier demande de cooptation</button>
-                  ${firstContact.linkedin_url ? `<a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(firstContact.linkedin_url)}" target="_blank" rel="noopener">Profil LinkedIn</a>` : ''}
+                  <button class="btn" style="height: 24px; padding: 0 8px; font-size: 11px;" data-referral-draft="${esc(firstContact.referral_draft || '')}" onclick="copyReferralDraft(this)">Copier demande de cooptation</button>
+                  ${safeUrl(firstContact.linkedin_url) ? `<a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(safeUrl(firstContact.linkedin_url))}" target="_blank" rel="noopener">Profil LinkedIn</a>` : ''}
                 </div>
               </div>
             `;
@@ -3429,18 +3465,22 @@
 
         if (fallbacks.length) {
           html += `<div class="section-label" style="margin-top: 6px;">Recherche directe de pairs &amp; recruteurs (1-clic)</div>`;
-          html += fallbacks.slice(0, 8).map(f => `
+          html += fallbacks.slice(0, 8).map(f => {
+            const peersUrl = safeUrl(f.linkedin_search && f.linkedin_search.peers_search_url);
+            const recruitersUrl = safeUrl(f.linkedin_search && f.linkedin_search.recruiters_search_url);
+            return `
             <div style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-solid); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
               <div>
                 <div style="font-weight: 600; font-size: 12.5px; color: var(--text);">${escapeHtml(f.company)}</div>
                 <div style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(f.title)}</div>
               </div>
               <div style="display: flex; gap: 6px;">
-                <a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(f.linkedin_search.peers_search_url)}" target="_blank" rel="noopener">Pairs</a>
-                <a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(f.linkedin_search.recruiters_search_url)}" target="_blank" rel="noopener">Recruteurs</a>
+                ${peersUrl ? `<a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(peersUrl)}" target="_blank" rel="noopener">Pairs</a>` : ''}
+                ${recruitersUrl ? `<a class="btn" style="height: 24px; padding: 0 8px; font-size: 11px; text-decoration: none;" href="${escapeHtml(recruitersUrl)}" target="_blank" rel="noopener">Recruteurs</a>` : ''}
               </div>
             </div>
-          `).join('');
+          `;
+          }).join('');
         }
 
         box.innerHTML = html || `<div style="font-size: 12.5px; color: var(--text-muted);">Aucune offre active à croiser pour le moment.</div>`;

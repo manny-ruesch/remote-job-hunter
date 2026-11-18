@@ -51,15 +51,30 @@ Changelog = "https://github.com/manny-ruesch/remote-job-hunter/blob/main/CHANGEL
 
 [tool.setuptools]
 include-package-data = true
+py-modules = [
+  "analyzer",
+  "auto_fill_engine",
+  "auto_fill_helper",
+  "config",
+  "cover_letter_generator",
+  "cv_profiler",
+  "cv_tailor",
+  "db",
+  "fetcher",
+  "heuristic_scorer",
+  "notifier",
+  "run_hunter",
+  "scrapling_enricher",
+]
 
 [tool.setuptools.dynamic]
 version = { attr = "rjh.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["rjh*"]
+include = ["rjh*", "dashboard*"]
 
 [tool.setuptools.package-data]
-# L'interface du Command Center (une fois déplacée dans rjh/web/) et les composants HTML voyagent dans le wheel.
+"dashboard" = ["static/**/*", "*.html", "*.bat"]
 "rjh.web" = ["*.html", "static/**/*"]
 
 [tool.ruff]

@@ -10,7 +10,7 @@ and lets you use the ChatGPT / Claude / Gemini subscription you already pay for.
 
 <p align="center">
   <a href="https://github.com/manny-ruesch/remote-job-hunter/actions"><img alt="CI" src="https://github.com/manny-ruesch/remote-job-hunter/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://pypi.org/project/remote-job-hunter/"><img alt="PyPI" src="https://img.shields.io/pypi/v/remote-job-hunter"></a>
+  <img alt="Install: Git / pipx" src="https://img.shields.io/badge/install-Git%20%2F%20pipx-informational">
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-blue">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
 </p>
@@ -47,14 +47,14 @@ Aucune clé d'API n'est nécessaire : choisissez « abonnement ChatGPT / Claude 
 
 ## Why Remote Job Hunter? (vs. SaaS Trackers & CLI Prompt Wrappers)
 
-Most "AI job search" repositories are either disguised SaaS subscriptions ($40/mo) or collections of Markdown prompts for developer CLIs that burn $20+ in API tokens per week and require Node/LaTeX toolchains. **Remote Job Hunter is a standalone, tested local software engine (204 unit tests):**
+Most "AI job search" repositories are either disguised SaaS subscriptions ($40/mo) or collections of Markdown prompts for developer CLIs that burn $20+ in API tokens per week and require Node/LaTeX toolchains. **Remote Job Hunter is a standalone, tested local software engine (214+ unit tests):**
 
 | Capability | SaaS AI Job Trackers ($29–$49/mo) | CLI Markdown Prompt Wrappers (`career-ops`, etc.) | **Remote Job Hunter (MIT)** |
 |---|---|---|---|
 | **Cost & LLM Requirement** | Paid subscription | Paid API tokens or paid coding CLI | **$0 — Works with your existing ChatGPT/Claude/Gemini web chat (`manual`), free Gemini API, or local `ollama`** |
 | **Interface** | Web app (cloud-hosted) | Terminal / Markdown files only | **Full Web Command Center (`:5070` — Cards, Sortable Table, 4-Column Kanban) + CLI (`rjh`)** |
 | **Target Professions** | General | Tech / AI Engineers only | **Universal (Tech, AI, Product, Finance, Healthcare, Legal, Creative — offline CV parser included)** |
-| **Built-in Sources** | Closed aggregator | 4–5 ATS | **11 source families (Ashby, Greenhouse, Lever, SmartRecruiters, Workable, WTTJ, Remotive, WWR, Jobicy, HN, Adzuna)** |
+| **Built-in Sources** | Closed aggregator | 4–5 ATS | **11 source engines (Ashby, Greenhouse, Lever, SmartRecruiters, Workable, WTTJ, Remotive, WWR, Jobicy, HN, Adzuna) + 50+ configured target company boards** |
 | **Reverse-ATS Discovery** | ❌ | Manual prompt | **`rjh discover` — Multi-threaded live probing across 5 ATS APIs + 1-click sync to `profile.yaml`** |
 | **Anti-Ghost Job & Liveness** | ❌ | LLM prompt check | **Zero-token direct ATS API verification (`active`/`expired`), Repost counter (>14d), and J+7 Follow-up Cadence Tracker** |
 | **Market Skill Gap Radar** | Basic keyword count | ❌ | **`rjh radar` — Cross-offer lexical gap analysis (65+ skills), filter rejection audit & 1-click profile boost** |

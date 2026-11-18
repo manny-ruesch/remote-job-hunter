@@ -140,12 +140,12 @@ def apply_manual_results(kind: str, results: dict[str, Any]):
                     pitch_hook = CASE WHEN pitch_hook IS NULL OR pitch_hook = '' THEN ? ELSE pitch_hook END,
                     status = CASE
                         WHEN status IN ('applied', 'interview', 'archived') THEN status
-                        WHEN ? >= ? THEN 'hot'
+                        WHEN ? >= ? AND (? IS NULL OR ? = '') THEN 'hot'
                         ELSE 'screened'
                     END,
                     analysis_status = 'ok'
                 WHERE id = ?
-            """, (res.score, res.why, res.gate, kws, kws, res.why, res.score, hot_th, job_id))
+            """, (res.score, res.why, res.gate, kws, kws, res.why, res.score, hot_th, res.gate, res.gate, job_id))
         elif kind == "dossier":
             c.execute("""
                 UPDATE jobs 
@@ -495,7 +495,9 @@ async def download_tailored_cv(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     safe_company = "".join(c for c in (job.get("company") or "Company") if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_") or "Company"
-    pdf_path = cv_tailor.TAILORED_DIR / f"CV_Candidate_{safe_company}.pdf"
+    cv_data = cv_tailor.load_candidate_cv()
+    safe_cand = "".join(c for c in (cv_data.get("name") or "Candidate") if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_") or "Candidate"
+    pdf_path = cv_tailor.TAILORED_DIR / f"CV_{safe_cand}_{safe_company}.pdf"
     if not pdf_path.exists():
         ok, payload = cv_tailor.create_tailored_cv_pdf(job_id, sync_active_cv=True)
         if not ok:
@@ -727,11 +729,45 @@ async def get_logs(lines: int = 80):
     }
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_dashboard():
+async def serve_dashboard(request: Request):
+    expected = os.environ.get("RJH_TOKEN", "").strip()
+    candidate = (
+        request.query_params.get("token", "")
+        or request.cookies.get("rjh_token", "")
+        or request.headers.get("x-rjh-token", "")
+    )
+    if expected:
+        if not candidate or not hmac.compare_digest(candidate, expected):
+            return HTMLResponse(
+                content="""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Remote Job Hunter — Authentification</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .box { background: #161b22; padding: 32px; border: 1px solid #30363d; border-radius: 8px; width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; }
+  h2 { margin: 0 0 10px; font-size: 18px; color: #f0f6fc; }
+  p { font-size: 13px; color: #8b949e; margin: 0 0 20px; line-height: 1.4; }
+  input { width: 100%; padding: 10px 12px; margin-bottom: 14px; background: #0d1117; border: 1px solid #30363d; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+  input:focus { border-color: #58a6ff; outline: none; }
+  button { width: 100%; padding: 10px; background: #238636; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+  button:hover { background: #2ea043; }
+</style></head>
+<body>
+<div class="box">
+  <h2>Command Center protégé</h2>
+  <p>Un jeton d'accès <code>RJH_TOKEN</code> est requis pour accéder à cette instance.</p>
+  <form method="GET">
+    <input type="password" name="token" placeholder="Collez votre jeton RJH_TOKEN..." required autofocus />
+    <button type="submit">Déverrouiller</button>
+  </form>
+</div>
+</body></html>""",
+                status_code=401,
+            )
     html_path = STATIC_DIR / "index.html"
     if html_path.exists():
         content = html_path.read_text(encoding="utf-8")
-        return HTMLResponse(
+        resp = HTMLResponse(
             content=content,
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -739,6 +775,9 @@ async def serve_dashboard():
                 "Expires": "0"
             }
         )
+        if expected and candidate and hmac.compare_digest(candidate, expected):
+            resp.set_cookie("rjh_token", candidate, httponly=True, samesite="strict")
+        return resp
     return "<h1>Remote Job Hunter Dashboard Loading...</h1>"
 
 if __name__ == "__main__":

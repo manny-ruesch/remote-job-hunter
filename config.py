@@ -20,12 +20,13 @@ def load_env_file(filepath: Path):
     except Exception:
         pass
 
-# Check RJH_HOME / local .env first, then fallback paths
+# Check RJH_ENV_FILE first (if set), then RJH_HOME/.env, then project .env
 ACTIVE_HOME = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else BASE_DIR
+ENV_FILE_OVERRIDE = Path(os.environ["RJH_ENV_FILE"]).expanduser() if os.environ.get("RJH_ENV_FILE") else None
+if ENV_FILE_OVERRIDE is not None:
+    load_env_file(ENV_FILE_OVERRIDE)
 load_env_file(ACTIVE_HOME / ".env")
 load_env_file(BASE_DIR / ".env")
-load_env_file(Path(".env"))
-load_env_file(Path.home() / ".hermes/.env")
 
 DB_PATH = os.environ.get("RJH_DB") or os.path.join(str(ACTIVE_HOME), "jobs.db")
 DIGEST_PATH = os.path.join(str(ACTIVE_HOME), "HOT_OPPORTUNITIES.md")
@@ -62,7 +63,7 @@ APPLICANT = {
     "location": os.getenv("APPLICANT_LOCATION") or _prof_identity.get("city") or "Remote (EU / US timezone overlap)",
     "email": os.getenv("APPLICANT_EMAIL") or _prof_identity.get("email") or "",
     "phone": os.getenv("APPLICANT_PHONE") or _prof_identity.get("phone") or "",
-    "portfolio": os.getenv("APPLICANT_PORTFOLIO") or _links.get("portfolio") or "https://manny-ruesch.github.io",
+    "portfolio": os.getenv("APPLICANT_PORTFOLIO") or _links.get("portfolio") or "",
     "github": os.getenv("APPLICANT_GITHUB") or _links.get("github") or "",
     "linkedin": os.getenv("APPLICANT_LINKEDIN") or _links.get("linkedin") or "",
     "title": os.getenv("APPLICANT_TITLE") or (_primary_titles[0].title() if _primary_titles else "AI & Automation Builder · Operations, Growth & Systems"),
@@ -79,7 +80,7 @@ KEYWORD_FILTERS = [
     "solutions", "forward deployed", "integration"
 ]
 
-# Roles specifically targeted (Junior to Mid sweet-spot for Alex's hybrid tech/ops profile)
+# Roles specifically targeted (Junior to Mid sweet-spot for hybrid tech/ops profile)
 TARGET_ROLES = [
     "ai automation", "automation specialist", "automation engineer",
     "workflow automation", "revops", "revenue operations", "growth operations",
@@ -103,22 +104,27 @@ DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", None)
 
 # Google Gemini API Key
-def get_google_api_key():
-    candidates = [
-        os.getenv("GOOGLE_API_KEY"),
-        ".env",
-        os.path.expanduser("~/.hermes/.env"),
-        str(BASE_DIR / ".env")
-    ]
+def get_google_api_key(env_file: "str | Path | None" = None) -> str:
     if os.getenv("GOOGLE_API_KEY"):
-        return os.getenv("GOOGLE_API_KEY")
-    for env_path in candidates[1:]:
-        if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("GOOGLE_API_KEY="):
-                        return line.split("=", 1)[1].strip("\"'")
+        return os.getenv("GOOGLE_API_KEY") or ""
+    explicit_env = env_file or os.environ.get("RJH_ENV_FILE")
+    active_home = Path(os.environ["RJH_HOME"]).expanduser() if os.environ.get("RJH_HOME") else BASE_DIR
+    candidates: list[Path] = []
+    if explicit_env:
+        candidates.append(Path(explicit_env).expanduser())
+    candidates.append(active_home / ".env")
+    if BASE_DIR / ".env" not in candidates:
+        candidates.append(BASE_DIR / ".env")
+    for env_path in candidates:
+        if env_path.exists():
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("GOOGLE_API_KEY="):
+                            return line.split("=", 1)[1].strip("\"'")
+            except Exception:
+                pass
     return ""
 
 GOOGLE_API_KEY = get_google_api_key()

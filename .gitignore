@@ -19,6 +19,7 @@ __pycache__/
 venv/
 
 # Personal search and generation outputs
+docs/AUDIT.md
 HOT_OPPORTUNITIES.md
 candidate_profile.json
 profile.yaml
@@ -36,3 +37,8 @@ tunnel.log
 !docs/assets/*.png
 *.zip
 *.tar.gz
+
+# Build and packaging
+dist/
+build/
+*.egg-info/

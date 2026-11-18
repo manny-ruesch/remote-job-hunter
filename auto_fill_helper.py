@@ -40,7 +40,8 @@ def open_job(job_id_or_url: str):
     pow_raw = job.get("proof_of_work")
     if pow_raw:
         try:
-            pow_data = json.loads(pow_raw) if isinstance(pow_raw, str) else pow_raw
+            from rjh.jsonparse import parse_json_loose
+            pow_data = parse_json_loose(pow_raw) if isinstance(pow_raw, str) else pow_raw
             print("\n🏗️ PROOF-OF-WORK ARCHITECTURE:\n")
             if pow_data.get("problem_diagnosis"):
                 print(f"• Bottleneck: {pow_data['problem_diagnosis']}")

@@ -13,7 +13,7 @@ from config import APPLICANT
 # Dynamic Resume Path
 resume_env = os.getenv("APPLICANT_RESUME_PATH", "")
 CV_PATH = Path(resume_env) if resume_env and Path(resume_env).exists() else (
-    Path("cv.pdf") if Path("cv.pdf").exists() else Path(BASE_DIR / "cv.pdf")
+    Path(BASE_DIR / "uploaded_cv.pdf") if Path(BASE_DIR / "uploaded_cv.pdf").exists() else Path(BASE_DIR / "cv.pdf")
 )
 
 def auto_fill_application(job_id_or_url: str):
